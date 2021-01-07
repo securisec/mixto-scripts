@@ -33,7 +33,7 @@ def _send_to_mixto(out: str, arg: str):
         method="POST",
         url=url,
         data=dumps(
-            {"type": "script", "title": "GDB - " + arg, "data": out, "meta": {}}
+            {"type": "tool", "title": "GDB - " + arg, "data": out, "meta": {}}
         ).encode(),
         headers={"x-api-key": MIXTO_API_KEY, "Content-Type": "application/json"},
     )
@@ -53,8 +53,8 @@ try:
         try:
             with open(conf_path) as f:
                 j = loads(f.read())
-                MIXTO_HOST = j["host"]
-                MIXTO_API_KEY = j["api_key"]
+                MIXTO_HOST = j.get("host")
+                MIXTO_API_KEY = j.get("api_key")
         except:
             print('Cannot find Mixto envars or config file')
 except:
