@@ -1,0 +1,14 @@
+Workflow:
+  ☐ optionally, pass a file to upload
+Bash:
+  ☐ Check if curl is available
+  ☐ Fallback to wget if not
+
+Archive:
+  ✔ if host variable is empty, show error to user @project(Workflow)
+  ✔ host variable has to be manually entered @project(Workflow)
+  ✔ have variable for entry id @project(Workflow)
+  ✔ if entry id var is empty, and entry id is not passed, show error @project(Workflow)
+  ✔ read hidden apikey from shell @project(Workflow)
+  ✔ pipe data to shell script @project(Workflow)
+  ✔ post data to mixto entry @project(Workflow)
