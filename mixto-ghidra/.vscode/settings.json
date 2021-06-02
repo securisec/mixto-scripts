@@ -1,0 +1,4 @@
+{
+  "go.lintOnSave": "off",
+  "python.linting.enabled": false
+}
