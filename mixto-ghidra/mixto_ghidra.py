@@ -145,6 +145,7 @@ class MixtoLite:
 Mixto Ghidra plugin
 Reference: https://github.com/HackOvert/GhidraSnippets
 """
+# from __ghidra__ import *
 from ghidra.app.decompiler import DecompInterface
 from ghidra.util.task import ConsoleTaskMonitor
 import json
@@ -216,7 +217,10 @@ if __name__ == "__main__":
     # send decompiled function
     if choice == "Decompile function":
         data, fn = GetDecompiled((functionManager))
-        sendToMixto(mixto, data, entryID, "(ghidra) {} {} decompiled".format(cp, fn))
+        if data:
+            sendToMixto(
+                mixto, data, entryID, "(ghidra) {} {} decompiled".format(cp, fn)
+            )
 
     # send a list of all functions
     elif choice == "All functions":
@@ -225,8 +229,9 @@ if __name__ == "__main__":
             fn, addr = func.getName(), func.getEntryPoint()
             if not fn.startswith("_"):
                 hold.append("{} @ 0x{}".format(fn, addr))
-        data = "\n".join(hold)
-        sendToMixto(mixto, data, entryID, "(ghidra) All functions {}".format(cp))
+        if len(data) > 0:
+            data = "\n".join(hold)
+            sendToMixto(mixto, data, entryID, "(ghidra) All functions {}".format(cp))
 
     # send imports
     elif choice == "Imports":
@@ -234,11 +239,13 @@ if __name__ == "__main__":
         symb = sm.getExternalSymbols()
         hold = []
         for s in symb:
+            parent = str(s.parentSymbol.toString())
             im = str(s.toString())
             if not im.startswith("_"):
-                hold.append(im)
-        data = "\n".join(hold)
-        sendToMixto(mixto, data, entryID, "(ghidra) Imports {}".format(cp))
+                hold.append("{} - {}".format(parent, im))
+        if len(hold) > 0:
+            data = "\n".join(hold)
+            sendToMixto(mixto, data, entryID, "(ghidra) Imports {}".format(cp))
 
     else:
         pass
