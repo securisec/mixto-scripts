@@ -22,7 +22,7 @@ class mixtoMitmproxy:
         )
 
     def _get_title(self, title_postfix: str):
-        return "mitmproxy: {} {} - {}".format(
+        return "(Mitmproxy): {} {} - {}".format(
             self.mitm_method, self.mitm_host[0:60], title_postfix
         )
 

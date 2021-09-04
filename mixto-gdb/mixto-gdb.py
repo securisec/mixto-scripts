@@ -33,7 +33,7 @@ def _send_to_mixto(out: str, arg: str):
         method="POST",
         url=url,
         data=dumps(
-            {"type": "tool", "title": "GDB - " + arg, "data": out, "meta": {}}
+            {"type": "tool", "title": "(GDB) - " + arg, "data": out, "meta": {}}
         ).encode(),
         headers={"x-api-key": MIXTO_API_KEY, "Content-Type": "application/json"},
     )

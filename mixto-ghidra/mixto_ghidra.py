@@ -219,7 +219,7 @@ if __name__ == "__main__":
         data, fn = GetDecompiled((functionManager))
         if data:
             sendToMixto(
-                mixto, data, entryID, "(ghidra) {} {} decompiled".format(cp, fn)
+                mixto, data, entryID, "(Ghidra) {} {} decompiled".format(cp, fn)
             )
 
     # send a list of all functions

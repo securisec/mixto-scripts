@@ -1,7 +1,10 @@
 
 Todo:
   ☐ exports
-  ☐ comments
+  ☐ comments: catch app pre,post, eol comments
+
+Bug:
+  ☐ @high see babyrev example. Pointers assigned to variables not showing up in decompiled code
 
 Archive:
   ✔ Imports @project(Todo)

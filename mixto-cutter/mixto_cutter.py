@@ -118,7 +118,7 @@ class MixtoDockWidget(cutter.CutterDockWidget):
                 data=dumps(
                     {
                         "type": "tool",
-                        "title": "Cutter - " + arg,
+                        "title": "(Cutter) - " + arg,
                         "data": out,
                         "meta": {},
                     }

@@ -38,7 +38,7 @@ end {
 
     $payload = @{
         "entry_id" = $MixtoEntryID;
-        "title"    = $MixtoCommitTitle;
+        "title"    = "(Powershell) $MixtoCommitTitle";
         "type"     = "stdout";
         "data"     = $output | Out-String;
     }
