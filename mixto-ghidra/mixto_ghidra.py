@@ -58,14 +58,17 @@ class MixtoLite:
                 raise
 
     def MakeRequest(
-        self, uri, data={}, is_query=False,
+        self,
+        uri,
+        data={},
+        is_query=False,
     ):
-        """Generic method helpful in extending this lib for other Mixto 
-        API calls. Refer to Mixto docs for all available API endpoints. 
+        """Generic method helpful in extending this lib for other Mixto
+        API calls. Refer to Mixto docs for all available API endpoints.
 
         Args:
             method (str): Request method
-            uri (str): Mixto URI. 
+            uri (str): Mixto URI.
             data (dict, optional): Body or query params. Defaults to {}.
             is_query (bool, optional): True if query params. Defaults to False.
 
@@ -87,7 +90,10 @@ class MixtoLite:
         # create request object
         req = Request(
             url=url,
-            headers={"x-api-key": self.api_key, "user-agent": "mixto-lite-py2",},
+            headers={
+                "x-api-key": self.api_key,
+                "user-agent": "mixto-lite-py2",
+            },
         )
         # add json content type if post body
         if not is_query:
@@ -107,7 +113,7 @@ class MixtoLite:
             raise BadResponse(e.code, e.read())
 
     def AddCommit(self, data, entry_id=None, title=""):
-        """Add/commit data to an entry. This is the primary functionality of 
+        """Add/commit data to an entry. This is the primary functionality of
         an integration
 
         Args:
@@ -131,8 +137,8 @@ class MixtoLite:
         )
 
     def GetWorkspaces(self):
-        """Get all workspaces, entries and commits in a compact format. 
-        Helpful when trying to populate entry ID and commit ID's or 
+        """Get all workspaces, entries and commits in a compact format.
+        Helpful when trying to populate entry ID and commit ID's or
         filter by workspace
 
         Returns:
@@ -145,10 +151,19 @@ class MixtoLite:
 Mixto Ghidra plugin
 Reference: https://github.com/HackOvert/GhidraSnippets
 """
-# from __ghidra__ import *
-from ghidra.app.decompiler import DecompInterface
-from ghidra.util.task import ConsoleTaskMonitor
-import json
+try:
+    import typing
+    if typing.TYPE_CHECKING:
+        import ghidra
+        from ghidra.ghidra_builtins import *
+        from ghidra.app.decompiler import DecompInterface
+        from ghidra.util.task import ConsoleTaskMonitor
+        from ghidra.app.util import DisplayableEol
+except:
+    from ghidra.app.decompiler import DecompInterface
+    from ghidra.util.task import ConsoleTaskMonitor
+    from ghidra.app.util import DisplayableEol
+
 
 
 def GetCurrentAddress():
@@ -174,7 +189,6 @@ class NoEntriesFound(BaseException):
 
 def GetDecompiled(functionManager):
     functionName = GetFunctionName(functionManager, GetCurrentAddress())
-    print("DEBUg", type(functionName.toString()), functionName)
     program = getCurrentProgram()
     ifc = DecompInterface()
     ifc.openProgram(program)
@@ -189,6 +203,7 @@ def GetDecompiled(functionManager):
 
 def sendToMixto(mixto, data, entryID, title):
     mixto.AddCommit(data, entryID, title)
+    print("Commit added")
 
 
 #
@@ -206,7 +221,7 @@ if __name__ == "__main__":
     choice = askChoice(
         "Select operation",
         "",
-        ["Decompile function", "Comments", "All functions", "Imports"],
+        ["Decompile function", "Comments", "All functions", "Imports", "Exports"],
         "Decompile function",
     )
     entryID = askChoice("Select Mixto Entry", "", entries, "")
@@ -229,7 +244,7 @@ if __name__ == "__main__":
             fn, addr = func.getName(), func.getEntryPoint()
             if not fn.startswith("_"):
                 hold.append("{} @ 0x{}".format(fn, addr))
-        if len(data) > 0:
+        if len(hold) > 0:
             data = "\n".join(hold)
             sendToMixto(mixto, data, entryID, "(ghidra) All functions {}".format(cp))
 
@@ -246,6 +261,12 @@ if __name__ == "__main__":
         if len(hold) > 0:
             data = "\n".join(hold)
             sendToMixto(mixto, data, entryID, "(ghidra) Imports {}".format(cp))
+
+    elif choice == "Exports":
+        raise NotImplementedError("Exports not yet implemented TODO")
+
+    elif choice == "Comments":
+        raise NotImplementedError("Comments not yet implemented TODO")
 
     else:
         pass

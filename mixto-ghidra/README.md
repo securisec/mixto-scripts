@@ -8,3 +8,6 @@ Put the mixto_ghidra.py script in the ghidra scripts directory. In Linux and OSX
 The enable the script from the script manager. This can be shown using the **green play button**. Make sure the search for mixto and check the activate box. 
 
 The integration can then be triggered from `Tools > Mixto` in the menu bar. 
+
+## Dev
+Types are used from [Ghidra stubs](https://github.com/VDOO-Connected-Trust/ghidra-pyi-generator)
