@@ -221,7 +221,7 @@ if __name__ == "__main__":
     choice = askChoice(
         "Select operation",
         "",
-        ["Decompile function", "Comments EOL", "All functions", "Imports", "Exports"],
+        ["Decompile function", "Comments", "All functions", "Imports", "Exports"],
         "Decompile function",
     )
     entryID = askChoice("Select Mixto Entry", "", entries, "")
@@ -265,24 +265,30 @@ if __name__ == "__main__":
     elif choice == "Exports":
         raise NotImplementedError("Exports not yet implemented TODO")
 
-    elif choice == "Comments EOL":
+    elif choice == "Comments":
         listing = currentProgram.getListing()
         functionName = GetFunctionName(functionManager, GetCurrentAddress())
-        func = getGlobalFunctions(functionName.toString())[0]
+        try:
+            func = getGlobalFunctions(functionName.toString())[0]
+        except AttributeError:
+            print('Not inside a function')
+            exit()
         addrSet = func.getBody()
         codeUnits = listing.getCodeUnits(addrSet, True)
 
         comments = []
+        commentTypes = {0: ' EOL', 1: ' PRE', 2: 'POST'}
 
         for codeUnit in codeUnits:
-            deol = DisplayableEol(codeUnit, True, True, True, True, 5, True, True)
-            for myc in deol.getEOLComments():
-                comment = myc.encode("utf-8")
-                if comment:
-                    comments.append("0x{} - {}".format(codeUnit.address, comment))
+            for k, v in commentTypes.items():
+                comment = codeUnit.getComment(k)
+                if comment is not None:
+                    comment = comment.decode("utf-8")
+                    if comment != "":
+                        comments.append("0x{} - {} - {}".format(codeUnit.address, v, comment))
         if len(comments) > 0:
             data = "\n".join(comments)
-            sendToMixto(mixto, data, entryID, "(Ghidra) Comments EOL {}".format(cp))
+            sendToMixto(mixto, data, entryID, "(Ghidra) Comments: {}".format(cp))
 
     else:
         pass
