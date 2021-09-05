@@ -221,7 +221,7 @@ if __name__ == "__main__":
     choice = askChoice(
         "Select operation",
         "",
-        ["Decompile function", "Comments", "All functions", "Imports", "Exports"],
+        ["Decompile function", "Comments EOL", "All functions", "Imports", "Exports"],
         "Decompile function",
     )
     entryID = askChoice("Select Mixto Entry", "", entries, "")
@@ -246,7 +246,7 @@ if __name__ == "__main__":
                 hold.append("{} @ 0x{}".format(fn, addr))
         if len(hold) > 0:
             data = "\n".join(hold)
-            sendToMixto(mixto, data, entryID, "(ghidra) All functions {}".format(cp))
+            sendToMixto(mixto, data, entryID, "(Ghidra) All functions {}".format(cp))
 
     # send imports
     elif choice == "Imports":
@@ -260,13 +260,29 @@ if __name__ == "__main__":
                 hold.append("{} - {}".format(parent, im))
         if len(hold) > 0:
             data = "\n".join(hold)
-            sendToMixto(mixto, data, entryID, "(ghidra) Imports {}".format(cp))
+            sendToMixto(mixto, data, entryID, "(Ghidra) Imports {}".format(cp))
 
     elif choice == "Exports":
         raise NotImplementedError("Exports not yet implemented TODO")
 
-    elif choice == "Comments":
-        raise NotImplementedError("Comments not yet implemented TODO")
+    elif choice == "Comments EOL":
+        listing = currentProgram.getListing()
+        functionName = GetFunctionName(functionManager, GetCurrentAddress())
+        func = getGlobalFunctions(functionName.toString())[0]
+        addrSet = func.getBody()
+        codeUnits = listing.getCodeUnits(addrSet, True)
+
+        comments = []
+
+        for codeUnit in codeUnits:
+            deol = DisplayableEol(codeUnit, True, True, True, True, 5, True, True)
+            for myc in deol.getEOLComments():
+                comment = myc.encode("utf-8")
+                if comment:
+                    comments.append("0x{} - {}".format(codeUnit.address, comment))
+        if len(comments) > 0:
+            data = "\n".join(comments)
+            sendToMixto(mixto, data, entryID, "(Ghidra) Comments EOL {}".format(cp))
 
     else:
         pass
