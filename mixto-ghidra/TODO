@@ -1,12 +1,15 @@
 
 Todo:
   ☐ exports
-  ☐ comments: catch app pre,post, eol comments
+  ☐ get xrefs to functions
 
 Bug:
   ☐ @high see babyrev example. Pointers assigned to variables not showing up in decompiled code
 
 Archive:
+  ✔ for imports, switch to using a dict instead of hold to nest imports by type when possible @project(Todo)
+  ✔ for decompile, add offset in title @project(Todo)
+  ✔ comments: catch app pre,post, eol comments @project(Todo)
   ✔ Imports @project(Todo)
   ✔ decompile function @project(Todo)
   ✔ functions @project(Todo)

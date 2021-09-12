@@ -198,7 +198,7 @@ def GetDecompiled(functionManager):
 
     # decompile the function and print the pseudo C
     results = ifc.decompileFunction(function, 0, ConsoleTaskMonitor())
-    return results.getDecompiledFunction().getC(), functionName
+    return results.getDecompiledFunction().getC(), function
 
 
 def sendToMixto(mixto, data, entryID, title):
@@ -233,9 +233,9 @@ if __name__ == "__main__":
     if choice == "Decompile function":
         data, fn = GetDecompiled((functionManager))
         if data:
-            sendToMixto(
-                mixto, data, entryID, "(Ghidra) {} {} decompiled".format(cp, fn)
-            )
+            title = "(Ghidra) {} {} @0x{} decompiled".format(cp, fn.toString().encode(), fn.getEntryPoint())
+            data = '# {}\n{}'.format(title, data)
+            sendToMixto(mixto, data, entryID, title[0:79])
 
     # send a list of all functions
     elif choice == "All functions":
@@ -243,24 +243,30 @@ if __name__ == "__main__":
         for func in functionManager.getFunctions(True):
             fn, addr = func.getName(), func.getEntryPoint()
             if not fn.startswith("_"):
+                # TODO
+                # print([x.getFromAddress() for x in getReferencesTo(addr)])
+                # print([GetFunctionName(functionManager, x.getFromAddress().getOffset()) for x in getReferencesTo(addr)])
                 hold.append("{} @ 0x{}".format(fn, addr))
         if len(hold) > 0:
             data = "\n".join(hold)
-            sendToMixto(mixto, data, entryID, "(Ghidra) All functions {}".format(cp))
+            sendToMixto(mixto, data, entryID, "(Ghidra) All functions {}".format(cp)[0:79])
 
     # send imports
     elif choice == "Imports":
         sm = currentProgram.getSymbolTable()
         symb = sm.getExternalSymbols()
-        hold = []
+        hold = {}
         for s in symb:
             parent = str(s.parentSymbol.toString())
             im = str(s.toString())
             if not im.startswith("_"):
-                hold.append("{} - {}".format(parent, im))
+                if parent not in hold:
+                    hold[parent] = [im]
+                else:
+                    hold[parent].append(im)
         if len(hold) > 0:
-            data = "\n".join(hold)
-            sendToMixto(mixto, data, entryID, "(Ghidra) Imports {}".format(cp))
+            data = '\n\n'.join(['%s : \n\t%s' % (k, '\n\t'.join(v)) for k, v in hold.items()])
+            sendToMixto(mixto, data, entryID, "(Ghidra) Imports {}".format(cp)[0:79])
 
     elif choice == "Exports":
         raise NotImplementedError("Exports not yet implemented TODO")
@@ -288,7 +294,7 @@ if __name__ == "__main__":
                         comments.append("0x{} - {} - {}".format(codeUnit.address, v, comment))
         if len(comments) > 0:
             data = "\n".join(comments)
-            sendToMixto(mixto, data, entryID, "(Ghidra) Comments: {}".format(cp))
+            sendToMixto(mixto, data, entryID, "(Ghidra) Comments: {}".format(cp)[0:79])
 
     else:
         pass
