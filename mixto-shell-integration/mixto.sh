@@ -4,6 +4,8 @@
 MIXTO_HOST="http://localhost:5000"
 # Set entry id or pass as flag
 MIXTO_ENTRY_ID=""
+# Workspace
+MIXTO_WORKSPACE=""
 
 # Mixto BASH
 
@@ -27,6 +29,7 @@ fi
 show_help() {
   printf '%bMixto bash\n%b' "$Cyan" "$Off"
   printf '\t-e\t\tEntry ID if not set [Optional]\n'
+  printf '\t-w\t\tWorkspace if not set [Optional]\n'
   printf '\t-t\t\tTitle of the entry [Optional]\n'
   printf '\t-h\t\tShow help\n'
   printf '\nUsage: some command | ./mixto.sh [optional args]\n'
@@ -38,6 +41,9 @@ while getopts ":e:t:h" opt; do
   case $opt in
     e)
       entry_id="$OPTARG" >&2
+      ;;
+    w)
+      workspace="$OPTARG" >&2
       ;;
     t)
       MIXTO_TITLE="$OPTARG" >&2
@@ -57,9 +63,17 @@ shift $((OPTIND-1))
 if [ -n "$entry_id" ]; then
     MIXTO_ENTRY_ID=$entry_id
 fi
+# set mixto workspace if passed as a flag
+if [ -n "$workspace" ]; then
+    MIXTO_WORKSPACE=$workspace
+fi
 
 if [ -z "$MIXTO_ENTRY_ID" ]; then
     echo '%bEntry id cannot be empty%b' "$Red" "$Off"
+    exit 1
+fi
+if [ -z "$MIXTO_WORKSPACE" ]; then
+    echo '%bWorkspace cannot be empty%b' "$Red" "$Off"
     exit 1
 fi
 
@@ -78,7 +92,7 @@ printf "\n"
 # if curl command is not found, use wget
 if command -v curl > /dev/null; then
   HTTP_RESPONSE=$(curl --silent --write-out "HTTPSTATUS:%{http_code}" -X POST \
-      "$MIXTO_HOST"'/api/entry/'"$MIXTO_ENTRY_ID"'/commit' \
+      "$MIXTO_HOST"'/api/entry/'"$MIXTO_WORKSPACE"'/'"$MIXTO_ENTRY_ID"'/commit' \
       -H 'Accept: */*' \
       -H 'Content-Type: application/json;charset=utf-8' \
       -H 'x-api-key: '"$MIXTO_API_KEY" \
@@ -92,7 +106,7 @@ if command -v curl > /dev/null; then
       printf '%bSent!%b\n' "$Green" "$Off"
   fi
 elif command -v wget > /dev/null; then
-  if wget -q --header="Content-Type: application/json;charset=utf-8" --header='x-api-key: '"$MIXTO_API_KEY" --post-data "$payload" "$MIXTO_HOST"'/api/entry/'"$MIXTO_ENTRY_ID"'/commit' > /dev/null; then
+  if wget -q --header="Content-Type: application/json;charset=utf-8" --header='x-api-key: '"$MIXTO_API_KEY" --post-data "$payload" "$MIXTO_HOST"'/api/entry/'"$MIXTO_WORKSPACE"'/'"$MIXTO_ENTRY_ID"'/commit' > /dev/null; then
     printf '%bSent!%b\n' "$Green" "$Off"
   else
     printf '%bCould not send!%b\n' "$Red" "$Off"

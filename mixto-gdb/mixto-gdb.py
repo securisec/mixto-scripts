@@ -9,6 +9,7 @@ from json import loads, dumps
 MIXTO_ENTRY_ID = getenv("MIXTO_ENTRY_ID")
 MIXTO_HOST = getenv("MIXTO_HOST")
 MIXTO_API_KEY = getenv("MIXTO_API_KEY")
+MIXTO_WORKSPACE = getenv("MIXTO_WORKSPACE")
 
 class MissingRequired(Exception):
     pass
@@ -19,6 +20,9 @@ class BadResponse(Exception):
 
 
 def _send_to_mixto(out: str, arg: str):
+    if MIXTO_WORKSPACE is None:
+        raise MissingRequired("Workspace is missing")
+
     if MIXTO_ENTRY_ID is None:
         raise MissingRequired("Entry ID is missing")
 
@@ -28,7 +32,7 @@ def _send_to_mixto(out: str, arg: str):
     if MIXTO_API_KEY is None:
         raise MissingRequired("Mixto API key is missing")
 
-    url = urljoin(MIXTO_HOST, "/api/entry/" + MIXTO_ENTRY_ID + "/commit")
+    url = urljoin(MIXTO_HOST, "/api/entry/" + MIXTO_WORKSPACE + "/" + MIXTO_ENTRY_ID + "/commit")
     req = Request(
         method="POST",
         url=url,

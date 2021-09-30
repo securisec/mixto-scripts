@@ -132,7 +132,7 @@ class MixtoLite:
 
         e_id = MIXTO_ENTRY_ID if MIXTO_ENTRY_ID else entry_id
         return self.MakeRequest(
-            "/api/entry/{}/commit".format(e_id),
+            "/api/entry/{}/{}/commit".format(self.workspace, e_id),
             {"data": data, "type": self.commit_type, "title": title},
         )
 

@@ -28,6 +28,7 @@ class MixtoDockWidget(cutter.CutterDockWidget):
             mixto = loads(f.read())
             self.mixto_api = mixto.get("api_key")
             self.mixto_host = mixto.get("host")
+            self.workspace = mixto.get("workspace")
 
         msg = "Unavailable"
         if self.mixto_api is None:
@@ -110,7 +111,7 @@ class MixtoDockWidget(cutter.CutterDockWidget):
             arg = self.command[0:70]
             out = cutter.cmd(self.command).strip()
             url = urljoin(
-                self.mixto_host, "/api/entry/" + self.mixto_entry_id + "/commit"
+                self.mixto_host, "/api/entry/" + self.workspace + "/" + self.mixto_entry_id + "/commit"
             )
             req = Request(
                 method="POST",

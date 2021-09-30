@@ -4,6 +4,8 @@
 param (
     # Entry id 
     [Parameter()] [String] $MixtoEntryID = "",
+    # Workspace
+    [Parameter()] [String] $MixtoWorkspace = "",
     # Commit title. Defaults to Untitled
     [Parameter()] [String] $MixtoCommitTitle = "",
     [Parameter(ValueFromPipeline = $True, Mandatory = $True)] $MixtoOutput = ""
@@ -15,6 +17,8 @@ end {
     $MIXTO_HOST = "http://localhost:5000"
     # Hardcoded entry ID or pass via parameter
     $MIX_ENTRY_ID = ""
+    # Hardcoded workspace or pass via parameter
+    $MIX_WORKSPACE = ""
     
     if ($MIXTO_HOST -eq "") {
         Write-Output "Missing Mixto host"
@@ -26,6 +30,9 @@ end {
     }
     elseif ($MixtoEntryID) {
         $MIX_ENTRY_ID = $MixtoEntryID
+    }
+    if ($MixtoWorkspace) {
+        $MIX_WORKSPACE = $MixtoWorkspace
     }
 
     $SecureMixtoAPIKey = Read-Host -Prompt "Enter Mixto API key" -AsSecureString
@@ -42,7 +49,7 @@ end {
         "type"     = "stdout";
         "data"     = $output | Out-String;
     }
-    $status = Invoke-WebRequest -Uri "$MIXTO_HOST/api/entry/$MixtoEntryID/commit" -UseBasicParsing -Method POST -Body ($payload | ConvertTo-Json) -ContentType "application/json" -Headers @{"x-api-key" = $MixtoAPIKey } | Select-Object -Expand StatusCode
+    $status = Invoke-WebRequest -Uri "$MIXTO_HOST/api/entry/$MIXTO_WORKSPACE/$MixtoEntryID/commit" -UseBasicParsing -Method POST -Body ($payload | ConvertTo-Json) -ContentType "application/json" -Headers @{"x-api-key" = $MixtoAPIKey } | Select-Object -Expand StatusCode
     if ($status -eq 200) {
         Write-Output "Sent!"
     }

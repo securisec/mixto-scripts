@@ -44,6 +44,7 @@ class MixtoLite:
                     j = json.loads(f.read())
                     self.host = j["host"]
                     self.api_key = j["api_key"]
+                    self.workspace = j["workspace"]
             except:
                 print("Cannot read mixto config file")
                 raise
@@ -119,7 +120,7 @@ class MixtoLite:
         e_id = MIXTO_ENTRY_ID if MIXTO_ENTRY_ID else entry_id
         r = self.MakeRequest(
             "POST",
-            "/api/entry/{}/commit".format(e_id),
+            "/api/entry/{}/{}/commit".format(self.workspace, e_id),
             {"data": data, "type": self.commit_type, "title": title},
         )
         return r
