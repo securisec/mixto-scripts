@@ -103,7 +103,7 @@ class MixtoLite:
         # send request
         try:
             res = urlopen(req)
-            body = res.read().decode()
+            body = res.read()
             self.status = res.getcode()
             if self.status > 300:
                 raise BadResponse(self.status, res)
@@ -137,14 +137,24 @@ class MixtoLite:
         )
 
     def GetWorkspaces(self):
-        """Get all workspaces, entries and commits in a compact format.
-        Helpful when trying to populate entry ID and commit ID's or
-        filter by workspace
+        """Get information about a specific workspace
 
         Returns:
-            List[dict]: Array of workspace items
+            dict: Array of workspace items
         """
-        return self.MakeRequest("/api/misc/workspaces", {"all": "true"}, True)
+        return json.loads(self.MakeRequest(
+            "/api/workspace/{}".format(self.workspace), is_query=True
+        ))
+
+    def GetEntryIDs(self):
+        """Get entry ids, commits etc for a workspace
+
+        Returns:
+            List[dict]: Array of entry ids
+        """
+        return json.loads(self.MakeRequest(
+            "/api/misc/workspaces/{}".format(self.workspace), is_query=True
+        ))
 
 
 """
@@ -153,6 +163,7 @@ Reference: https://github.com/HackOvert/GhidraSnippets
 """
 try:
     import typing
+
     if typing.TYPE_CHECKING:
         import ghidra
         from ghidra.ghidra_builtins import *
@@ -163,7 +174,6 @@ except:
     from ghidra.app.decompiler import DecompInterface
     from ghidra.util.task import ConsoleTaskMonitor
     from ghidra.app.util import DisplayableEol
-
 
 
 def GetCurrentAddress():
@@ -210,10 +220,12 @@ def sendToMixto(mixto, data, entryID, title):
 if __name__ == "__main__":
 
     mixto = MixtoLite()
-    workspaces = mixto.GetWorkspaces()
-    workspaces = json.loads(workspaces)
+    entries = mixto.GetEntryIDs()
 
-    entries = [w["entry_id"] for w in workspaces if w["workspace"] == mixto.workspace]
+    if len(entries) == 0:
+        raise NoEntriesFound("No entries found")
+
+    entries = [w["entry_id"] for w in entries]
 
     if len(entries) == 0:
         raise NoEntriesFound("no entries found")
@@ -233,8 +245,10 @@ if __name__ == "__main__":
     if choice == "Decompile function":
         data, fn = GetDecompiled((functionManager))
         if data:
-            title = "(Ghidra) {} {} @0x{} decompiled".format(cp, fn.toString().encode(), fn.getEntryPoint())
-            data = '# {}\n{}'.format(title, data)
+            title = "(Ghidra) {} {} @0x{} decompiled".format(
+                cp, fn.toString().encode(), fn.getEntryPoint()
+            )
+            data = "# {}\n{}".format(title, data)
             sendToMixto(mixto, data, entryID, title[0:79])
 
     # send a list of all functions
@@ -249,7 +263,9 @@ if __name__ == "__main__":
                 hold.append("{} @ 0x{}".format(fn, addr))
         if len(hold) > 0:
             data = "\n".join(hold)
-            sendToMixto(mixto, data, entryID, "(Ghidra) All functions {}".format(cp)[0:79])
+            sendToMixto(
+                mixto, data, entryID, "(Ghidra) All functions {}".format(cp)[0:79]
+            )
 
     # send imports
     elif choice == "Imports":
@@ -265,7 +281,9 @@ if __name__ == "__main__":
                 else:
                     hold[parent].append(im)
         if len(hold) > 0:
-            data = '\n\n'.join(['%s : \n\t%s' % (k, '\n\t'.join(v)) for k, v in hold.items()])
+            data = "\n\n".join(
+                ["%s : \n\t%s" % (k, "\n\t".join(v)) for k, v in hold.items()]
+            )
             sendToMixto(mixto, data, entryID, "(Ghidra) Imports {}".format(cp)[0:79])
 
     elif choice == "Exports":
@@ -277,13 +295,13 @@ if __name__ == "__main__":
         try:
             func = getGlobalFunctions(functionName.toString())[0]
         except AttributeError:
-            print('Not inside a function')
+            print("Not inside a function")
             exit()
         addrSet = func.getBody()
         codeUnits = listing.getCodeUnits(addrSet, True)
 
         comments = []
-        commentTypes = {0: ' EOL', 1: ' PRE', 2: 'POST'}
+        commentTypes = {0: " EOL", 1: " PRE", 2: "POST"}
 
         for codeUnit in codeUnits:
             for k, v in commentTypes.items():
@@ -291,7 +309,9 @@ if __name__ == "__main__":
                 if comment is not None:
                     comment = comment.decode("utf-8")
                     if comment != "":
-                        comments.append("0x{} - {} - {}".format(codeUnit.address, v, comment))
+                        comments.append(
+                            "0x{} - {} - {}".format(codeUnit.address, v, comment)
+                        )
         if len(comments) > 0:
             data = "\n".join(comments)
             sendToMixto(mixto, data, entryID, "(Ghidra) Comments: {}".format(cp)[0:79])

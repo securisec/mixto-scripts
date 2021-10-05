@@ -129,27 +129,6 @@ class MixtoLite:
             {"data": data, "type": self.commit_type, "title": title},
         )
 
-    def GetWorkspaces(self):
-        """Get all workspaces, entries and commits in a compact format.
-        Helpful when trying to populate entry ID and commit ID's or
-        filter by workspace
-
-        Returns:
-            List[dict]: Array of workspace items
-        """
-        return self.MakeRequest("/api/misc/workspaces", {"all": "true"}, True)
-
-    def GetEntryIDs(self):
-        """Get all entry ids filtered by the current workspace
-
-        Returns:
-            List[str]: List of entry ids
-        """
-        # get all workspaces
-        workspaces = self.GetWorkspaces()
-        # filter workspaces by current workspace
-        return [w["entry_id"] for w in workspaces if w["workspace"] == self.workspace]
-
 
 """
 Mixto IDA Plugin

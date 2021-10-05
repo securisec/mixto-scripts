@@ -86,18 +86,20 @@ class MixtoDockWidget(cutter.CutterDockWidget):
     def setupActions(self):
         self.decompileContext = QAction("Mixto - decompile", self)
         self.commentContext = QAction("Mixto - comments", self)
-        menu = self.main.getContextMenuExtensions(cutter.MainWindow.ContextMenuType.Disassembly)
+        menu = self.main.getContextMenuExtensions(
+            cutter.MainWindow.ContextMenuType.Disassembly
+        )
         menu.addAction(self.decompileContext)
         menu.addAction(self.commentContext)
         self.decompileContext.triggered.connect(self.sendDecompile)
         self.commentContext.triggered.connect(self.sendComments)
 
     def sendDecompile(self):
-        self.command = 'pdg'
+        self.command = "pdg"
         self.send_to_mixto()
 
     def sendComments(self):
-        self.command = 'af; CCf'
+        self.command = "af; CCf"
         self.send_to_mixto()
 
     def get_eid(self, text):
@@ -111,7 +113,8 @@ class MixtoDockWidget(cutter.CutterDockWidget):
             arg = self.command[0:70]
             out = cutter.cmd(self.command).strip()
             url = urljoin(
-                self.mixto_host, "/api/entry/" + self.workspace + "/" + self.mixto_entry_id + "/commit"
+                self.mixto_host,
+                "/api/entry/{}/{}/commit".format(self.workspace, self.mixto_entry_id),
             )
             req = Request(
                 method="POST",

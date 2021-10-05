@@ -142,7 +142,11 @@ class MixtoLite:
             List[dict]: Array of workspace items
         """
         return self.MakeRequest(
-            "GET", "/api/misc/workspaces", None, {"all": "true"}, True
+            "GET",
+            "/api/misc/workspaces/{}".format(self.workspace),
+            None,
+            {"all": "true"},
+            True,
         )
 
     def GetEntryIDs(self) -> List[str]:
