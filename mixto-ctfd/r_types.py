@@ -14,3 +14,7 @@ class CTFdChallenge(BaseModel):
 class CTFdResponse(BaseModel):
     success: bool
     data: List[CTFdChallenge]
+
+class MixtoEntry(BaseModel):
+    title: str
+    category: str
