@@ -42,7 +42,8 @@ class CreateMixtoEntries:
         """
         url = urljoin(self.mixto_url, f"/api/workspace/{self.workspace}")
         res = requests.get(url, headers={"x-api-key": self.config.api_key})
-        return res.json()["entries_count"] != 0
+        current_count = res.json().get("entries_count", 0)
+        return current_count != 0
 
     def process_entries(self) -> List[MixtoEntry]:
         """
