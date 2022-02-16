@@ -4,8 +4,10 @@ Todo:
 Platforms:
   ☐ rctf
   ☐ mellivora
+  ☐ pico
 
 Archive:
+  ✔ refactor with abstract classes @project(Platforms)
   ✔ flag for workspace. use current workspace if no workspace is given @project(Todo)
   ✔ confirm prompt @project(Todo)
   ✔ query workspace before adding. if length of entries > 0, ask for confirmation @project(Todo)

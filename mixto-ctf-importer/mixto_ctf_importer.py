@@ -8,17 +8,17 @@ from typing import List
 from urllib.parse import urljoin
 from pathlib import Path
 import requests
+from lib.ctfd import CTFd
+from lib.pico import PicoCTF
 
-from r_types import CTFdChallenge, CTFdResponse, MixtoConfig, MixtoEntry
+from lib.r_types import MixtoConfig, MixtoEntry
+from lib.helpers import ParseKwargs
+
+MIXTO_USER_AGENT = "mixto-ctf-importer"
 
 
 class CreateMixtoEntries:
-    def __init__(
-        self, platform: str, ctf_url: str, ctf_session: str, workspace: str = None
-    ) -> None:
-        self.ctf_url = ctf_url
-        self.ctf_session = ctf_session
-        self.ctfPlatform = platform
+    def __init__(self, workspace: str = None) -> None:
         self.config = self.read_mixto_conf()
         self.workspace = workspace if workspace is not None else self.config.workspace
 
@@ -32,7 +32,7 @@ class CreateMixtoEntries:
         """
         config_path = Path.home() / ".mixto.json"
         if not config_path.exists():
-            self.show_error("The configuration file does not exist.")
+            raise Exception("The configuration file does not exist.")
         with config_path.open() as config_file:
             return MixtoConfig(**json.load(config_file))
 
@@ -45,9 +45,9 @@ class CreateMixtoEntries:
         current_count = res.json().get("entries_count", 0)
         return current_count != 0
 
-    def process_entries(self) -> List[MixtoEntry]:
+    def batch_create_entries(self, entries: List[MixtoEntry]) -> None:
         """
-        Processes an array of challenges and returns an array of entries.
+        Batch create entries
         """
         # check if workspace has entries
         if self.workspace_has_entries():
@@ -55,42 +55,27 @@ class CreateMixtoEntries:
                 f'The workspace "{self.workspace}" already has entries. Do you want to add to them?'
             )
 
-        hold: List[MixtoEntry] = []
-        challenges = self.get_challenges()
-        for challenge in challenges:
-            if challenge.category in self.config.categories:
-                hold.append({"title": challenge.name, "category": challenge.category})
-            else:
-                hold.append({"title": challenge.name, "category": "other"})
-        return hold
-
-    def batch_create_entries(self) -> None:
-        """
-        Batch create entries
-        """
-        entries = self.process_entries()
         # confirm batch add entries
         self.confirm(f"Do you want to add {len(entries)} entries to {self.workspace}?")
         try:
             url = urljoin(self.mixto_url, f"/api/entry/{self.workspace}")
-            r = requests.put(
-                url, json=entries, headers={"x-api-key": self.config.api_key}
+            res = requests.put(
+                url,
+                json=entries,
+                headers={
+                    "x-api-key": self.config.api_key,
+                    "User-Agent": MIXTO_USER_AGENT,
+                },
             )
-            if r.status_code != 200:
-                self.show_error(f"Failed to add entries: {r.status_code}")
+            if res.status_code != 200:
+                raise Exception(f"Failed to add entries: {res.status_code}")
             # print the number of entries created
-            added = r.json()
+            added = res.json()
             for entry in added:
                 print(f"Added {entry['category']} {entry['title']}")
             print("Entries added: ", len(added))
         except Exception as e:
-            self.show_error(f"Error when adding entries: {r.status_code}")
-
-    def show_error(self, message: str):
-        """
-        Prints an error message and exits the program.
-        """
-        raise Exception(message)
+            raise Exception(f"Error when adding entries")
 
     def confirm(self, msg: str):
         """
@@ -100,28 +85,6 @@ class CreateMixtoEntries:
         if not input("[Y/n] ").lower() == "y":
             print("Aborting...")
             exit(1)
-
-    def get_challenges(self) -> List[CTFdChallenge]:
-        """
-        Returns all challenges from the CTFd instance.
-        """
-        if self.ctfPlatform == "ctfd":
-            return self.get_ctfd_challenges()
-        else:
-            self.show_error("The platform is not supported.")
-
-    # methods to get challenges from various platforms
-
-    def get_ctfd_challenges(self) -> List[CTFdChallenge]:
-        """
-        Returns all challenges from the CTFd instance.
-        """
-        url = urljoin(self.ctf_url, "/api/v1/challenges")
-        try:
-            r = requests.get(url, cookies={"session": self.ctf_session})
-            return CTFdResponse(**r.json()).data
-        except Exception as e:
-            self.show_error(f"Failed to get challenges: {e}")
 
 
 if __name__ == "__main__":
@@ -133,25 +96,48 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument(
-        "--session",
-        help="A valid session cookie value from the CTFd instance",
+        "--platform",
+        help="The CTF scoring platform to use",
+        choices=["ctfd", "pico"],
         required=True,
     )
     parser.add_argument(
-        "--platform",
-        help="The CTF scoring platform to use",
-        default="ctfd",
-        choices=["ctfd", "redpwn", "mellivora"],
+        "--event-id", help="The event id to use", required=False, default=None
     )
     parser.add_argument(
         "--workspace", help="The workspace to add entries to. Defaults to mixto config"
     )
+    parser.add_argument(
+        "--cookies",
+        help="Cookies. Example cookiename=cookievalue. Can add multiple.",
+        nargs="*",
+        action=ParseKwargs,
+    )
     args = parser.parse_args()
 
-    m = CreateMixtoEntries(
-        platform=args.platform,
-        ctf_url=args.host,
-        ctf_session=args.session,
+    # placeholder for mixto entries
+    entries: List[MixtoEntry] = []
+    mixto = CreateMixtoEntries(
         workspace=args.workspace,
     )
-    m.batch_create_entries()
+
+    ctf_platform = args.platform
+    if ctf_platform == "ctfd":
+        c = CTFd(args.host, args.cookies, mixto.config)
+        entries = c.process_challenges_to_entries()
+
+    elif ctf_platform == "pico":
+        c = PicoCTF(args.host, args.cookies, args.event_id, mixto.config)
+        entries = c.process_challenges_to_entries()
+
+    else:
+        print("Scoring server not implemented yet")
+        exit(1)
+
+    # sanity check
+    if len(entries) == 0:
+        print("No challenges found")
+        exit(1)
+
+    # batch create entries
+    mixto.batch_create_entries(entries)
