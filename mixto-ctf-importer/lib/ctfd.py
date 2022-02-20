@@ -35,6 +35,8 @@ class CTFd(GetAndProcessChallenges):
         url = urljoin(self.host, "/api/v1/challenges")
         try:
             r = requests.get(url, cookies=self.cookies, headers=default_headers)
+            if r.status_code >= 400:
+                raise Exception(f"{r.status_code} {r.reason}")
             return CTFdResponse(**r.json()).data
         except Exception as e:
             raise Exception(f"Failed to get challenges: {e}")

@@ -4,9 +4,22 @@ Todo:
 Platforms:
   ☐ rctf
   ☐ mellivora
-  ☐ pico
+  ☐ hackthebox
+
+Hackthebox:
+  ☐ implement GetAndProcessChallenges class
+  ☐ add types
+  ☐ update argparse argument
+  ☐ add to if logic in main
+
+Template:
+  ☐ implement GetAndProcessChallenges class
+  ☐ add types
+  ☐ update argparse argument
+  ☐ add to if logic in main
 
 Archive:
+  ✔ pico @project(Platforms)
   ✔ refactor with abstract classes @project(Platforms)
   ✔ flag for workspace. use current workspace if no workspace is given @project(Todo)
   ✔ confirm prompt @project(Todo)
