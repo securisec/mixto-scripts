@@ -1,22 +1,10 @@
 from typing import Any, List
-from pydantic import BaseModel
 from abc import ABC, abstractmethod
+from .mixto import MixtoEntry
 
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36"
 
 default_headers = {"User-Agent": USER_AGENT}
-
-
-class MixtoConfig(BaseModel):
-    api_key: str
-    categories: List[str]
-    host: str
-    workspace: str
-
-
-class MixtoEntry(BaseModel):
-    title: str
-    category: str
 
 
 class GetAndProcessChallenges(ABC):
@@ -26,8 +14,10 @@ class GetAndProcessChallenges(ABC):
     """
 
     @abstractmethod
-    def validate_cookie(self) -> bool:
-        """Ensure valid cookies are provided."""
+    def get_cookies(self) -> dict:
+        """
+        Get cookies for the session.
+        """
         pass
 
     @abstractmethod
@@ -43,3 +33,10 @@ class GetAndProcessChallenges(ABC):
         Process an array of challenges as an array of Mixto entries.
         """
         pass
+
+
+def validate_dict(d: dict) -> None:
+    """Validate a dictionary to make sure it has all the required keys."""
+    for k, v in d.items():
+        if not v:
+            raise Exception(f"{k} is not provided")

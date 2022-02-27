@@ -1,7 +1,13 @@
 from typing import List
 from urllib.parse import urljoin
 from pydantic import BaseModel
-from .r_types import MixtoConfig, default_headers, MixtoEntry, GetAndProcessChallenges
+
+from .mixto import MixtoConfig, MixtoEntry
+from .r_types import (
+    default_headers,
+    GetAndProcessChallenges,
+    validate_dict,
+)
 import requests
 
 
@@ -20,21 +26,23 @@ class CTFd(GetAndProcessChallenges):
     host: str = ""
     config: MixtoConfig = None
 
-    def __init__(self, host: str, cookies: dict, config: MixtoConfig) -> None:
+    def __init__(self, host: str, config: MixtoConfig) -> None:
         super().__init__()
         self.host = host
-        self.cookies = cookies
         self.config = config
 
-    def validate_cookie(self) -> bool:
-        return self.cookies.get("session") is not None
+    def get_cookies(self) -> dict:
+        c = {}
+        c["session"] = input("Value for session cookie: ")
+        validate_dict(c)
+        return c
 
     def get_challenges(self) -> List[CTFdChallenge]:
-        if not self.validate_cookie():
-            raise Exception("session cookie is not provided")
+        session_cookie = self.get_cookies()["session"]
+        cookies = {"session": session_cookie}
         url = urljoin(self.host, "/api/v1/challenges")
         try:
-            r = requests.get(url, cookies=self.cookies, headers=default_headers)
+            r = requests.get(url, cookies=cookies, headers=default_headers)
             if r.status_code >= 400:
                 raise Exception(f"{r.status_code} {r.reason}")
             return CTFdResponse(**r.json()).data

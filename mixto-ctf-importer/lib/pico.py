@@ -1,7 +1,8 @@
 from typing import List
 from urllib.parse import urljoin
 from pydantic import BaseModel
-from .r_types import MixtoConfig, default_headers, MixtoEntry, GetAndProcessChallenges
+from .mixto import MixtoConfig, MixtoEntry
+from .r_types import default_headers, GetAndProcessChallenges, validate_dict
 import requests
 
 
@@ -19,35 +20,36 @@ class PicoResponse(BaseModel):
 
 
 class PicoCTF(GetAndProcessChallenges):
-    cookies: dict = {}
     host: str = ""
     config: MixtoConfig = None
 
-    def __init__(
-        self, host: str, cookies: dict, event_id: int, config: MixtoConfig
-    ) -> None:
+    def __init__(self, host: str, config: MixtoConfig) -> None:
         super().__init__()
         self.host = host
-        self.cookies = cookies
+        self.cookies = None
         self.config = config
-        self.event_id = event_id
+        self.event_id = None
 
-        if event_id is None:
-            raise Exception("event_id is required")
-
+        get_cookies = self.get_cookies()
+        cookies = {
+            "csrftoken": get_cookies["csrftoken"],
+            "sessionid": get_cookies["sessionid"],
+        }
         # convert cookie to a string to pass in headers
-        cookies_to_header = "; ".join([f"{k}={v}" for k, v in self.cookies.items()])
+        cookies_to_header = "; ".join([f"{k}={v}" for k, v in cookies.items()])
         default_headers["cookie"] = cookies_to_header
 
-    def validate_cookie(self) -> bool:
-        return (
-            self.cookies.get("csrftoken") is not None
-            and self.cookies.get("sessionid") is not None
-        )
+        self.event_id = get_cookies["original_event"]
+
+    def get_cookies(self) -> dict:
+        c = {}
+        c["sessionid"] = input("Value for sessionid cookie: ")
+        c["csrftoken"] = input("Value for csrftoken cookie: ")
+        c["original_event"] = input("Original event ID from URL: ")
+        validate_dict(c)
+        return c
 
     def get_challenges(self) -> List[PicoChallenge]:
-        if not self.validate_cookie():
-            raise Exception("session cookie is not provided")
         url = urljoin(self.host, "/api/challenges/")
         try:
             r = requests.get(
@@ -68,7 +70,10 @@ class PicoCTF(GetAndProcessChallenges):
         for challenge in challenges:
             if challenge.category.name.lower() in self.config.categories:
                 hold.append(
-                    {"title": challenge.name, "category": challenge.category.name.lower()}
+                    {
+                        "title": challenge.name,
+                        "category": challenge.category.name.lower(),
+                    }
                 )
             else:
                 hold.append({"title": challenge.name, "category": "other"})
