@@ -124,7 +124,7 @@ class MixtoLite:
         r = self.MakeRequest(
             "POST",
             "/api/entry/{}/{}/commit".format(self.workspace, e_id),
-            {"data": data, "type": self.commit_type, "title": title},
+            {"data": data, "type": self.commit_type, "title": title, "tags": ["mitmproxy"]},
         )
         return r
 
