@@ -16,10 +16,7 @@ if __name__ == "__main__":
     # argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--host",
-        help="The hostname of the CTFd scoreboard. Do not include /api/v1",
-    )
-    parser.add_argument(
+        "-p",
         "--platform",
         help="The CTF scoring platform to use",
         choices=["ctfd", "htb", "pico"],
@@ -38,10 +35,8 @@ if __name__ == "__main__":
 
     ctf_platform = args.platform
     if ctf_platform == "ctfd":
-        if args.host is None:
-            print("You must specify the host flag for CTFd")
-            exit(1)
-        c = CTFd(args.host, mixto.config)
+        ctfdHost = input("CTFD host: ")
+        c = CTFd(ctfdHost, mixto.config)
         entries = c.process_challenges_to_entries()
 
     elif ctf_platform == "pico":

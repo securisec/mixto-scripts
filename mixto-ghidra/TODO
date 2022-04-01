@@ -2,6 +2,8 @@
 Todo:
   ☐ exports
   ☐ get xrefs to functions
+  send selection
+  sort entry id for entry selection
 
 Bug:
   ☐ @high see babyrev example. Pointers assigned to variables not showing up in decompiled code
