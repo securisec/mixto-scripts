@@ -42,7 +42,7 @@ class CTFd(GetAndProcessChallenges):
         cookies = {"session": session_cookie}
         url = urljoin(self.host, "/api/v1/challenges")
         try:
-            r = requests.get(url, cookies=cookies, headers=default_headers)
+            r = requests.get(url, cookies=cookies, headers=default_headers, verify=False)
             if r.status_code >= 400:
                 raise Exception(f"{r.status_code} {r.reason}")
             return CTFdResponse(**r.json()).data

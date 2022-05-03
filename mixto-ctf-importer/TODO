@@ -6,11 +6,8 @@ Platforms:
   ☐ mellivora
   ☐ hackthebox
 
-Hackthebox:
-  ☐ implement GetAndProcessChallenges class
-  ☐ add types
-  ☐ update argparse argument
-  ☐ add to if logic in main
+Improve:
+  ☐ check for duplicates
 
 Template:
   ☐ implement GetAndProcessChallenges class
