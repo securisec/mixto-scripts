@@ -16,17 +16,17 @@ from lib.custom import validate_custom_json
 if __name__ == "__main__":
     # argument parser
     parser = argparse.ArgumentParser()
-    group = parser.add_mutually_exclusive_group(required=True)
+    # group = parser.add_mutually_exclusive_group(required=True)
     parser.add_argument(
         "-p",
         "--platform",
         help="The CTF scoring platform to use",
         choices=["ctfd", "htb", "pico"],
     )
-    group.add_argument(
+    parser.add_argument(
         "--workspace", help="The workspace to add entries to. Defaults to mixto config"
     )
-    group.add_argument('--json', help='The path to the json file containing the entries.')
+    parser.add_argument('--json', help='The path to the json file containing the entries.', required=False)
     args = parser.parse_args()
 
     # placeholder for mixto entries

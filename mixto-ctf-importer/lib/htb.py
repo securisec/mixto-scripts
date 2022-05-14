@@ -7,10 +7,15 @@ import requests
 
 
 HTBCategories = {
+    16: "other",
+    15: "hardware",
     13: "osint",
     2: "web",
     7: "forensics",
     8: "misc",
+    4: "crypto",
+    3: "pwn",
+    5: "reversing",
 }
 
 
