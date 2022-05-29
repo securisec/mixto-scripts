@@ -26,6 +26,11 @@ class mixtoMitmproxy:
             self.mitm_method, self.mitm_host[0:60], title_postfix
         )
 
+    def _success_msg(self):
+        msg = f"[+] Successfully committed to Mixto {self.get_entry_id()}"
+        print(msg)
+        ctx.log.info(msg)
+
     def load(self, loader):
         loader.add_option(
             name="mixto_entry_id",
@@ -37,8 +42,15 @@ class mixtoMitmproxy:
     def get_entry_id(self):
         mixto_entry_id = ctx.options.mixto_entry_id
         if not mixto_entry_id:
-            raise "Missing Entry ID"
+            raise Exception("Please set the entry ID with --mixto_entry_id")
         return mixto_entry_id
+
+    @command("mixto.set_entry_id")
+    def set_entry_id(self, entry_id: str):
+        ctx.options.mixto_entry_id = entry_id
+        msg = f"Entry ID set to {entry_id}"
+        print(msg)
+        ctx.log.info(msg)
 
     @command("mixto.request")
     def req(self, flow: flow.Flow) -> None:
@@ -55,7 +67,7 @@ class mixtoMitmproxy:
             entry_id=mixto_entry_id,
             title=self._get_title("request"),
         )
-        print("Sent!")
+        self._success_msg()
 
     @command("mixto.request_header")
     def req_header(self, flow: flow.Flow) -> None:
@@ -72,7 +84,7 @@ class mixtoMitmproxy:
             entry_id=mixto_entry_id,
             title=self._get_title("request.header"),
         )
-        print("Sent!")
+        self._success_msg()
 
     @command("mixto.response_header")
     def res_header(self, flow: flow.Flow) -> None:
@@ -89,7 +101,7 @@ class mixtoMitmproxy:
             entry_id=mixto_entry_id,
             title=self._get_title("response.header"),
         )
-        print("Sent!")
+        self._success_msg()
 
     @command("mixto.response")
     def res(self, flow: flow.Flow) -> None:
@@ -106,7 +118,7 @@ class mixtoMitmproxy:
             entry_id=mixto_entry_id,
             title=self._get_title("response"),
         )
-        print("Sent!")
+        self._success_msg()
 
     @command("mixto.full")
     def full(self, flow: flow.Flow) -> None:
@@ -125,7 +137,7 @@ class mixtoMitmproxy:
             entry_id=mixto_entry_id,
             title=self._get_title("request.response"),
         )
-        print("Sent!")
+        self._success_msg()
 
     @command("mixto.cert")
     def certificate(self, flow: flow.Flow) -> None:
@@ -145,7 +157,7 @@ class mixtoMitmproxy:
             self.mixto.AddCommit(
                 data=data, title=self._get_title("certificate"), entry_id=mixto_entry_id
             )
-            print("Sent!")
+            self._success_msg()
         except Exception as e:
             if hasattr(e, "message"):
                 ctx.log.error(e.message)
