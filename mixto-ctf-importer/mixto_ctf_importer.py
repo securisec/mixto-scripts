@@ -11,6 +11,7 @@ from lib.htb import HtbCTF
 from lib.r_types import MixtoEntry
 from lib.mixto import MixtoEntry, CreateMixtoEntries
 from lib.custom import validate_custom_json
+from lib.rctf import RCTF
 
 
 if __name__ == "__main__":
@@ -21,12 +22,16 @@ if __name__ == "__main__":
         "-p",
         "--platform",
         help="The CTF scoring platform to use",
-        choices=["ctfd", "htb", "pico"],
+        choices=["ctfd", "htb", "pico", "rctf"],
     )
     parser.add_argument(
         "--workspace", help="The workspace to add entries to. Defaults to mixto config"
     )
-    parser.add_argument('--json', help='The path to the json file containing the entries.', required=False)
+    parser.add_argument(
+        "--json",
+        help="The path to the json file containing the entries.",
+        required=False,
+    )
     args = parser.parse_args()
 
     # placeholder for mixto entries
@@ -44,6 +49,10 @@ if __name__ == "__main__":
     if ctf_platform == "ctfd":
         ctfdHost = input("CTFD host: ")
         c = CTFd(ctfdHost, mixto.config)
+        entries = c.process_challenges_to_entries()
+
+    elif ctf_platform == "rctf":
+        c = RCTF(input("Host: "), mixto.config)
         entries = c.process_challenges_to_entries()
 
     elif ctf_platform == "pico":

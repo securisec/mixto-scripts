@@ -6,29 +6,16 @@ from .r_types import default_headers, GetAndProcessChallenges, validate_dict
 import requests
 
 
-HTBCategories = {
-    16: "other",
-    15: "hardware",
-    13: "osint",
-    2: "web",
-    7: "forensics",
-    8: "misc",
-    4: "crypto",
-    3: "pwn",
-    5: "reversing",
-}
-
-
-class HTBChallenge(BaseModel):
+class RctfChallenge(BaseModel):
     name: str
-    challenge_category_id: int
+    category: str
 
 
-class HTBResponse(BaseModel):
-    challenges: List[HTBChallenge]
+class RctfResponse(BaseModel):
+    data: List[RctfChallenge]
 
 
-class HtbCTF(GetAndProcessChallenges):
+class RCTF(GetAndProcessChallenges):
     host: str = ""
     config: MixtoConfig = None
 
@@ -36,22 +23,18 @@ class HtbCTF(GetAndProcessChallenges):
         super().__init__()
         self.host = host
         self.config = config
-        self.event_id = None
 
         info = self.get_auth()
         default_headers["Authorization"] = f"Bearer {info['token']}"
 
-        self.event_id = info["event_id"]
-
     def get_auth(self) -> dict:
         c = {}
-        c["event_id"] = input("Event ID: ")
         c["token"] = input("Bearer Token: ")
         validate_dict(c)
         return c
 
-    def get_challenges(self) -> List[HTBChallenge]:
-        url = urljoin(self.host, f"/api/ctf/{self.event_id}")
+    def get_challenges(self) -> List[RctfChallenge]:
+        url = urljoin(self.host, f"/api/v1/challs")
         try:
             r = requests.get(
                 url,
@@ -60,7 +43,7 @@ class HtbCTF(GetAndProcessChallenges):
             if r.status_code >= 400:
                 print(f"\nFailed to get challenges: {r.text} {r.status_code}")
                 exit(1)
-            return HTBResponse(**r.json()).challenges
+            return RctfResponse(**r.json()).data
         except Exception as e:
             raise Exception(f"Failed to get challenges: {e}")
 
@@ -68,10 +51,8 @@ class HtbCTF(GetAndProcessChallenges):
         hold = []
         challenges = self.get_challenges()
         for challenge in challenges:
-            hold.append(
-                {
-                    "title": challenge.name,
-                    "category": HTBCategories[challenge.challenge_category_id],
-                }
-            )
+            if challenge.category in self.config.categories:
+                hold.append({"title": challenge.name, "category": challenge.category})
+            else:
+                hold.append({"title": challenge.name, "category": "other"})
         return hold

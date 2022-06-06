@@ -30,7 +30,7 @@ class PicoCTF(GetAndProcessChallenges):
         self.config = config
         self.event_id = None
 
-        get_cookies = self.get_cookies()
+        get_cookies = self.get_auth()
         cookies = {
             "csrftoken": get_cookies["csrftoken"],
             "sessionid": get_cookies["sessionid"],
@@ -41,7 +41,7 @@ class PicoCTF(GetAndProcessChallenges):
 
         self.event_id = get_cookies["original_event"]
 
-    def get_cookies(self) -> dict:
+    def get_auth(self) -> dict:
         c = {}
         c["sessionid"] = input("Value for sessionid cookie: ")
         c["csrftoken"] = input("Value for csrftoken cookie: ")

@@ -31,14 +31,14 @@ class CTFd(GetAndProcessChallenges):
         self.host = host
         self.config = config
 
-    def get_cookies(self) -> dict:
+    def get_auth(self) -> dict:
         c = {}
         c["session"] = input("Value for session cookie: ")
         validate_dict(c)
         return c
 
     def get_challenges(self) -> List[CTFdChallenge]:
-        session_cookie = self.get_cookies()["session"]
+        session_cookie = self.get_auth()["session"]
         cookies = {"session": session_cookie}
         url = urljoin(self.host, "/api/v1/challenges")
         try:

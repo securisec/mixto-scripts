@@ -14,7 +14,7 @@ class GetAndProcessChallenges(ABC):
     """
 
     @abstractmethod
-    def get_cookies(self) -> dict:
+    def get_auth(self) -> dict:
         """
         Get cookies for the session.
         """
