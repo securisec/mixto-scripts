@@ -1,0 +1,14 @@
+[
+    {
+        "caption": "Mixto commit editor: commit editor content",
+        "command": "mixto_commit"
+    },
+    {
+        "caption": "Mixto commit selection: commit selected content",
+        "command": "mixto_commit_selection"
+    },
+    {
+        "caption": "Mixto show commit: open a commit",
+        "command": "mixto_get_commit"
+    }
+]

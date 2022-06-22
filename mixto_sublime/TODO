@@ -1,0 +1,8 @@
+
+Todo:
+  ☐ refactor as DRY
+  
+Archive:
+  ✔ commit editor @project(Todo)
+  ✔ commit selection @project(Todo)
+  ✔ open commit @project(Todo)
