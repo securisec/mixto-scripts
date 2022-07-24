@@ -7,15 +7,26 @@ import requests
 
 
 HTBCategories = {
+    21: "network",
+    20: "cloud",
+    18: "network",
+    17: "network",
     16: "other",
     15: "hardware",
+    14: "other",
     13: "osint",
-    2: "web",
-    7: "forensics",
+    12: "android",
+    11: "scripting",
+    10: "pcap",
+    9: "other",
     8: "misc",
+    7: "forensics",
+    6: "stego",
+    5: "reversing",
     4: "crypto",
     3: "pwn",
-    5: "reversing",
+    2: "web",
+    1: "network",
 }
 
 

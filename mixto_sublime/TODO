@@ -1,8 +1,11 @@
 
 Todo:
   ☐ refactor as DRY
+  ☐ show notes
   
 Archive:
+  ✔ add notes from editor @project(Todo)
+  ✔ change filename before commiting @project(Todo)
   ✔ commit editor @project(Todo)
   ✔ commit selection @project(Todo)
   ✔ open commit @project(Todo)

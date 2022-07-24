@@ -176,29 +176,44 @@ def commit(self, entry, selected=False):
         mixto.AddCommit(self.text, entry["entry_id"], f"(sublime) {self.file_name}")
 
 
-def get_file_name(self):
-    file = self.view.file_name()
-    return str(Path(file).name) if file else "Untitled"
+class _FilenameInputHandler(sublime_plugin.TextInputHandler):
+    def __init__(self, fileNameFromInput):
+        self.fileNameFromInput = fileNameFromInput
+
+    def name(self):
+        return "fileNameFromInput"
+
+    def initial_text(self):
+        return self.fileNameFromInput
 
 
 class MixtoCommitCommand(sublime_plugin.TextCommand):
     """
     Commit current editor to Mixto
     """
+
     def __init__(self, window) -> None:
         super().__init__(window)
 
         self.selected_entry = {}
         self.text = ""
-        self.file_name = ""
+
+        file = self.view.file_name()
+        self.file_name = str(Path(file).name) if file else "Untitled"
 
     def is_enabled(self):
         return True
 
-    def run(self, edit):
+    def input(self, args):
+        return _FilenameInputHandler(self.file_name)
+
+    def input_description(self):
+        return "File name"
+
+    def run(self, edit, fileNameFromInput):
+        self.file_name = fileNameFromInput
         self.entries = mixto.GetEntryIDs()
         self.text = self.view.substr(sublime.Region(0, self.view.size()))
-        self.file_name = get_file_name(self)
         if not self.text:
             return
 
@@ -213,27 +228,73 @@ class MixtoCommitCommand(sublime_plugin.TextCommand):
         commit(self, self.entries[index])
 
 
-class MixtoCommitSelectionCommand(sublime_plugin.TextCommand):
+class MixtoAddNoteCommand(sublime_plugin.TextCommand):
     """
-    Commit current selection to Mixto. The filename will include the line numbers
+    Commit current editor to as a note in Mixto
     """
+
     def __init__(self, window) -> None:
         super().__init__(window)
 
         self.selected_entry = {}
         self.text = ""
-        self.file_name = ""
 
     def is_enabled(self):
         return True
 
     def run(self, edit):
         self.entries = mixto.GetEntryIDs()
+        self.text = self.view.substr(sublime.Region(0, self.view.size()))
+        if not self.text:
+            return
+
+        self.view.window().show_quick_panel(
+            [x["title"] for x in self.entries], on_select=self._entry_selector_cb
+        )
+
+    def _entry_selector_cb(self, index: int):
+        if index == -1 or index == None or len(self.entries) == 0:
+            return
+
+        entry = self.entries[index]
+        confirm = sublime.ok_cancel_dialog(
+            f"Add note to '{entry['title']}' in '{mixto.workspace}' workspace?"
+        )
+        if confirm:
+            entry_id = entry["entry_id"]
+            url = "/api/entry/{}/{}/notes".format(mixto.workspace, entry_id)
+            mixto.MakeRequest("POST", url, {"text": self.text})
+
+
+class MixtoCommitSelectionCommand(sublime_plugin.TextCommand):
+    """
+    Commit current selection to Mixto. The filename will include the line numbers
+    """
+
+    def __init__(self, window) -> None:
+        super().__init__(window)
+
+        self.selected_entry = {}
+        self.text = ""
+        _file = self.view.file_name()
+        self.file_name = str(Path(_file).name) if _file else "Untitled"
+
+    def is_enabled(self):
+        return True
+
+    def input(self, args):
+        return _FilenameInputHandler(self.file_name)
+
+    def input_description(self):
+        return "File name"
+
+    def run(self, edit, fileNameFromInput):
+        self.file_name = fileNameFromInput
+        self.entries = mixto.GetEntryIDs()
 
         sel = self.view.sel()[0]
         self.text = self.view.substr(sel)
 
-        self.file_name = get_file_name(self)
         if not self.text:
             return
 
@@ -257,6 +318,7 @@ class MixtoGetCommitCommand(sublime_plugin.TextCommand):
     """
     Open a valid commit in a new tab
     """
+
     def __init__(self, window) -> None:
         super().__init__(window)
         self._edit = None
