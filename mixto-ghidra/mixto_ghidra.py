@@ -34,7 +34,7 @@ class MixtoLite:
     def __init__(self, host=None, api_key=None):
         self.host = host
         self.api_key = api_key
-        self.workspace = None
+        self.workspace_id = None
         self.status = 0
         self.commit_type = "tool"
 
@@ -52,7 +52,7 @@ class MixtoLite:
                     j = json.loads(f.read())
                     self.host = j["host"]
                     self.api_key = j["api_key"]
-                    self.workspace = j["workspace"]
+                    self.workspace_id = j["workspace_id"]
             except:
                 print("Cannot read mixto config file")
                 raise
@@ -132,19 +132,15 @@ class MixtoLite:
 
         e_id = MIXTO_ENTRY_ID if MIXTO_ENTRY_ID else entry_id
         return self.MakeRequest(
-            "/api/entry/{}/{}/commit".format(self.workspace, e_id),
-            {"data": data, "type": self.commit_type, "title": title, "tags": ["ghidra"]},
+            "/api/v1/commit",
+            {
+                "data": data,
+                "commit_type": self.commit_type,
+                "title": title,
+                "entry_id": entry_id,
+                "workspace_id": self.workspace_id,
+            },
         )
-
-    def GetWorkspaces(self):
-        """Get information about a specific workspace
-
-        Returns:
-            dict: Array of workspace items
-        """
-        return json.loads(self.MakeRequest(
-            "/api/workspace/{}".format(self.workspace), is_query=True
-        ))
 
     def GetEntryIDs(self):
         """Get entry ids, commits etc for a workspace
@@ -152,9 +148,9 @@ class MixtoLite:
         Returns:
             List[dict]: Array of entry ids
         """
-        return json.loads(self.MakeRequest(
-            "/api/misc/workspaces/{}".format(self.workspace), is_query=True
-        ))
+        return json.loads(
+            self.MakeRequest("/api/v1/workspace", {"workspace_id": self.workspace_id})
+        )
 
 
 """
@@ -212,7 +208,8 @@ def GetDecompiled(functionManager):
 
 
 def sendToMixto(mixto, data, entryID, title):
-    mixto.AddCommit(data, entryID, title)
+    entry_id = entryID.split('id:')[1]
+    mixto.AddCommit(data, entry_id, title)
     print("Commit added")
 
 
@@ -225,7 +222,8 @@ if __name__ == "__main__":
     if len(entries) == 0:
         raise NoEntriesFound("No entries found")
 
-    entries = [w["entry_id"] for w in entries]
+
+    entries = ['{} id:{}'.format(w['title'], w["entry_id"]) for w in entries['data']['entries']]
 
     if len(entries) == 0:
         raise NoEntriesFound("no entries found")
