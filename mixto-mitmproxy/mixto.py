@@ -44,7 +44,7 @@ class MixtoLite:
                     j = json.loads(f.read())
                     self.host = j["host"]
                     self.api_key = j["api_key"]
-                    self.workspace = j["workspace"]
+                    self.workspace_id = j["workspace_id"]
             except:
                 print("Cannot read mixto config file")
                 raise
@@ -123,12 +123,18 @@ class MixtoLite:
         e_id = MIXTO_ENTRY_ID if MIXTO_ENTRY_ID else entry_id
         r = self.MakeRequest(
             "POST",
-            "/api/entry/{}/{}/commit".format(self.workspace, e_id),
-            {"data": data, "type": self.commit_type, "title": title, "tags": ["mitmproxy"]},
+            "/api/v1/commit",
+            {
+                "data": data,
+                "commit_type": self.commit_type,
+                "title": title,
+                "entry_id": e_id,
+                "workspace_id": self.workspace_id,
+            },
         )
         return r
 
-    def GetWorkspaces(self):
+    def GetEntries(self):
         """Get all workspaces, entries and commits in a compact format.
         Helpful when trying to populate entry ID and commit ID's or
         filter by workspace
@@ -138,8 +144,8 @@ class MixtoLite:
         """
         return self.MakeRequest(
             "GET",
-            "/api/misc/workspaces/{}".format(self.workspace),
+            "/api/v1/workspace",
+            {"workspace_id": self.workspace_id},
             None,
-            {"all": "true"},
             True,
         )

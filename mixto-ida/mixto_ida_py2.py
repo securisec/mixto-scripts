@@ -27,7 +27,7 @@ class MixtoLite:
     def __init__(self, host=None, api_key=None):
         self.host = host
         self.api_key = api_key
-        self.worksapce = None
+        self.workspace_id = None
         self.status = 0
         self.commit_type = "tool"
 
@@ -45,7 +45,7 @@ class MixtoLite:
                     j = json.loads(f.read())
                     self.host = j["host"]
                     self.api_key = j["api_key"]
-                    self.worksapce = j["workspace"]
+                    self.workspace_id = j["workspace_id"]
             except:
                 print("Cannot read mixto config file")
                 raise
@@ -96,7 +96,7 @@ class MixtoLite:
         # send request
         try:
             res = urlopen(req)
-            body = res.read().decode()
+            body = res.read()
             self.status = res.getcode()
             if self.status > 300:
                 raise BadResponse(self.status, res)
@@ -125,9 +125,40 @@ class MixtoLite:
 
         e_id = MIXTO_ENTRY_ID if MIXTO_ENTRY_ID else entry_id
         return self.MakeRequest(
-            "/api/entry/{}/{}/commit".format(self.worksapce, e_id),
-            {"data": data, "type": self.commit_type, "title": title},
+            "/api/v1/commit",
+            {
+                "data": data,
+                "workspace_id": self.workspace_id,
+                "entry_id": e_id,
+                "commit_type": self.commit_type,
+                "title": title,
+            },
         )
+
+    def GetWorkspaces(self):
+        """Get information and stats about the current workspace
+
+        Returns:
+            List[dict]: Array of workspace items
+        """
+        return json.loads(self.MakeRequest("/api/v1/workspace", {}, True))["data"]
+
+    def GetEntryIDs(self):
+        """Get all entry ids filtered by the current workspace
+
+        Returns:
+            List[dict]: List of entry ids
+        """
+        # get all entries
+        entries = json.loads(
+            self.MakeRequest(
+                "/api/v1/workspace".format(self.workspace_id),
+                {"workspace_id": self.workspace_id},
+                True,
+            )["data"]["entries"]
+        )
+        # get only entry ids
+        return entries
 
 
 """

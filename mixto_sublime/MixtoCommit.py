@@ -30,9 +30,9 @@ class MixtoLite:
         super().__init__()
         self.host = host
         self.api_key = api_key
-        self.workspace = None
+        self.workspace_id = None
         self.status = 0
-        self.commit_type = "tool"
+        self.commit_type = "script"
 
         # if envars are set, always use those values
         if MIXTO_HOST is not None and self.host is None:
@@ -48,7 +48,7 @@ class MixtoLite:
                     j = json.loads(f.read())
                     self.host = j["host"]
                     self.api_key = j["api_key"]
-                    self.workspace = j["workspace"]
+                    self.workspace_id = j["workspace_id"]
             except:
                 print("Cannot read mixto config file")
                 raise
@@ -127,18 +127,16 @@ class MixtoLite:
         e_id = MIXTO_ENTRY_ID if MIXTO_ENTRY_ID else entry_id
         r = self.MakeRequest(
             "POST",
-            "/api/entry/{}/{}/commit".format(self.workspace, e_id),
-            {"data": data, "type": self.commit_type, "title": title},
+            "/api/v1/commit",
+            {
+                "data": data,
+                "commit_type": self.commit_type,
+                "title": title,
+                "entry_id": e_id,
+                "workspace_id": self.workspace_id,
+            },
         )
         return r
-
-    def GetWorkspaces(self) -> dict:
-        """Get all workspaces information and stats
-
-        Returns:
-            dict: Array of workspace items
-        """
-        return self.MakeRequest("GET", "/api/workspace")
 
     def GetEntryIDs(self, get_all: bool = False) -> List[str]:
         """Get all entry ids filtered by the current workspace
@@ -147,16 +145,15 @@ class MixtoLite:
             List[str]: List of entry ids
         """
         # get all entries
-        entries = self.MakeRequest(
-            "GET",
-            "/api/misc/workspaces/{}".format(self.workspace),
-            None,
+        resp = self.MakeRequest(
+            "POST",
+            "/api/v1/workspace",
+            {"workspace_id": self.workspace_id},
         )
-        # filter workspaces by current workspace
-        # modified for sublime
-        if get_all:
-            return entries
-        return [{"entry_id": x["entry_id"], "title": x["title"]} for x in entries]
+        return [
+            {"entry_id": x["entry_id"], "title": x["title"]}
+            for x in resp["data"]["entries"]
+        ]
 
 
 # Sublime plugin code
@@ -170,7 +167,7 @@ mixto = MixtoLite()
 
 def commit(self, entry, selected=False):
     confirm = sublime.ok_cancel_dialog(
-        f"Commit {'selection' if selected else 'editor'} to '{entry['title']}' in '{mixto.workspace}' workspace?"
+        f"Commit {'selection' if selected else 'editor'} to '{entry['title']}' in '{mixto.workspace_id}' workspace?"
     )
     if confirm:
         mixto.AddCommit(self.text, entry["entry_id"], f"(sublime) {self.file_name}")
@@ -258,11 +255,11 @@ class MixtoAddNoteCommand(sublime_plugin.TextCommand):
 
         entry = self.entries[index]
         confirm = sublime.ok_cancel_dialog(
-            f"Add note to '{entry['title']}' in '{mixto.workspace}' workspace?"
+            f"Add note to '{entry['title']}' in '{mixto.workspace_id}' workspace?"
         )
         if confirm:
             entry_id = entry["entry_id"]
-            url = "/api/entry/{}/{}/notes".format(mixto.workspace, entry_id)
+            url = "/api/entry/{}/{}/notes".format(mixto.workspace_id, entry_id)
             mixto.MakeRequest("POST", url, {"text": self.text})
 
 
@@ -372,7 +369,7 @@ class MixtoGetCommitCommand(sublime_plugin.TextCommand):
         entry_id = self.selected_entry["entry_id"]
 
         commit_data = mixto.MakeRequest(
-            "GET", f"/api/entry/{mixto.workspace}/{entry_id}/commit/{commit_id}"
+            "GET", f"/api/entry/{mixto.workspace_id}/{entry_id}/commit/{commit_id}"
         )
 
         if "data" not in commit_data:
