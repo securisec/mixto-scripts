@@ -37,13 +37,14 @@ class CtftimeWriteup(MixtoLite):
         # create table
         self.db.execute(
             f"""
-        CREATE TABLE IF NOT EXISTS '{self._table_name}' (
-            entry_id varchar PRIMARY KEY,
-            workspace_id varchar NOT NULL,
-            commit_id varchar NOT NULL,
-            writeup text NOT NULL,
-            created_at int64 NOT NULL
-        );
+            CREATE TABLE IF NOT EXISTS '{self._table_name}' (
+                entry_id varchar PRIMARY KEY,
+                workspace_id varchar NOT NULL,
+                commit_id varchar NOT NULL,
+                writeup text NOT NULL,
+                title text NOT NULL,
+                created_at int64 NOT NULL
+            );
         """
         )
 
@@ -51,7 +52,7 @@ class CtftimeWriteup(MixtoLite):
         self, entry_id: str
     ) -> Union[None, Tuple[str, str, str, str, int]]:
         """Get an entry from the db. If entry does not exist, the return value is None.
-        Order of values are entry_id, workspace_id, commit_id, writeup, int(time())
+        Order of values are entry_id, workspace_id, commit_id, writeup, title, int(time())
 
         Args:
             entry_id (str): _description_
@@ -65,13 +66,13 @@ class CtftimeWriteup(MixtoLite):
 
     def _db_set_entries(self, entries: List[List[Any]]):
         """Insert multiple entries to the db. Order of values are
-        entry_id, workspace_id, commit_id, writeup, int(time())
+        entry_id, workspace_id, commit_id, writeup, title, int(time())
 
         Args:
             entries (List[List[Any]]): Array of rows
         """
         self.cursor.executemany(
-            f"INSERT into {self._table_name} values (?,?,?,?,?)", entries
+            f"INSERT into {self._table_name} values (?,?,?,?,?,?)", entries
         )
         self.db.commit()
 
@@ -215,7 +216,14 @@ if __name__ == "__main__":
             )
             task["commit_id"] = res["commit_id"]
             _added_entries.append(
-                [entry_id, c.workspace_id, res["commit_id"], writeup, int(time())]
+                [
+                    entry_id,
+                    c.workspace_id,
+                    res["commit_id"],
+                    writeup,
+                    task["title"],
+                    int(time()),
+                ]
             )
             print(task)
 
