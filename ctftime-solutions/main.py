@@ -1,6 +1,9 @@
 import re
 import argparse
-from typing import Any, Dict, List, Union, cast
+from typing import Any, Dict, List, Union, cast, Tuple
+import sqlite3
+from time import time
+from pathlib import Path
 import requests
 from parsel import Selector
 from mixto import MixtoLite
@@ -23,10 +26,54 @@ class CtftimeWriteup(MixtoLite):
         """
         super().__init__()
         self.commit_type = "url"
+        self._table_name = "ctftime"
         self.event_id = event_id
         self.request_headers = {
             "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
         }
+        # create db bindings
+        self.db = sqlite3.connect(str(Path(Path.home() / ".mixto" / "mixto.db")))
+        self.cursor = self.db.cursor()
+        # create table
+        self.db.execute(
+            f"""
+        CREATE TABLE IF NOT EXISTS '{self._table_name}' (
+            entry_id varchar PRIMARY KEY,
+            workspace_id varchar NOT NULL,
+            commit_id varchar NOT NULL,
+            writeup text NOT NULL,
+            created_at int64 NOT NULL
+        );
+        """
+        )
+
+    def _db_get_entry(
+        self, entry_id: str
+    ) -> Union[None, Tuple[str, str, str, str, int]]:
+        """Get an entry from the db. If entry does not exist, the return value is None.
+        Order of values are entry_id, workspace_id, commit_id, writeup, int(time())
+
+        Args:
+            entry_id (str): _description_
+
+        Returns:
+            Union[None, Tuple[str, str, str, str, int]]: _description_
+        """
+        return self.cursor.execute(
+            f"SELECT * from {self._table_name} where entry_id = ?", [entry_id]
+        ).fetchone()
+
+    def _db_set_entries(self, entries: List[List[Any]]):
+        """Insert multiple entries to the db. Order of values are
+        entry_id, workspace_id, commit_id, writeup, int(time())
+
+        Args:
+            entries (List[List[Any]]): Array of rows
+        """
+        self.cursor.executemany(
+            f"INSERT into {self._table_name} values (?,?,?,?,?)", entries
+        )
+        self.db.commit()
 
     def make_request(self, url: str) -> requests.Response:
         """Make a ctftime request
@@ -128,6 +175,12 @@ class CtftimeWriteup(MixtoLite):
         events = self.ctftime_get_event(self.event_id)
 
         for e in entries:
+            # check if entry id exists in db. If it does, a writeup has been added for it
+            # already and we can skip it. A none value means it does not exist
+            if self._db_get_entry(e["entry_id"]) is not None:
+                print(f'Skipping {e["title"]}. Writeup already exists')
+                continue
+
             m = events.get(e["title"].lower())
             if m:
                 hold[e["entry_id"]] = {"writeup": m, "title": e["title"]}
@@ -147,6 +200,8 @@ if __name__ == "__main__":
 
     c = CtftimeWriteup(str(args.event))
 
+    # holder to save all added entries in the end
+    _added_entries = []
     for entry_id, task in c.match_mixto_entries().items():
         task_id = c.ctftime_get_task(task["writeup"])
         writeup = cast(str, c.ctftime_get_writeup(cast(str, task_id)))
@@ -159,4 +214,13 @@ if __name__ == "__main__":
                 entry_id=entry_id, data=writeup, optional={"documentation": True}
             )
             task["commit_id"] = res["commit_id"]
+            _added_entries.append(
+                [entry_id, c.workspace_id, res["commit_id"], writeup, int(time())]
+            )
             print(task)
+
+    if len(_added_entries) > 0:
+        # commits were added to save it to the db
+        c._db_set_entries(_added_entries)
+    # close sqlite connection
+    c.db.close()
