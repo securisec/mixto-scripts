@@ -106,7 +106,9 @@ class MixtoLite:
         except HTTPError as e:
             raise BadResponse(e.code, e.read())
 
-    def AddCommit(self, data: str, entry_id: str = None, title: str = ""):
+    def AddCommit(
+        self, data: str, entry_id: str = None, title: str = "", syntax: str = ""
+    ):
         """Add/commit data to an entry. This is the primary functionality of
         an integration
 
@@ -134,6 +136,7 @@ class MixtoLite:
                 "title": title,
                 "entry_id": e_id,
                 "workspace_id": self.workspace_id,
+                "meta": {"syntax": syntax}
             },
         )
         return r
@@ -170,7 +173,7 @@ def commit(self, entry, selected=False):
         f"Commit {'selection' if selected else 'editor'} to '{entry['title']}' in '{mixto.workspace_id}' workspace?"
     )
     if confirm:
-        mixto.AddCommit(self.text, entry["entry_id"], f"(sublime) {self.file_name}")
+        mixto.AddCommit(self.text, entry["entry_id"], f"(sublime) {self.file_name}", self.syntax)
 
 
 class _FilenameInputHandler(sublime_plugin.TextInputHandler):
@@ -194,6 +197,7 @@ class MixtoCommitCommand(sublime_plugin.TextCommand):
 
         self.selected_entry = {}
         self.text = ""
+        self.syntax = ""
 
         file = self.view.file_name()
         self.file_name = str(Path(file).name) if file else "Untitled"
@@ -211,6 +215,7 @@ class MixtoCommitCommand(sublime_plugin.TextCommand):
         self.file_name = fileNameFromInput
         self.entries = mixto.GetEntryIDs()
         self.text = self.view.substr(sublime.Region(0, self.view.size()))
+        self.syntax = self.view.syntax().name.lower()
         if not self.text:
             return
 
