@@ -136,27 +136,25 @@ class MixtoLite:
                 "title": title,
                 "entry_id": e_id,
                 "workspace_id": self.workspace_id,
-                "meta": {"syntax": syntax}
+                "meta": {"syntax": syntax},
             },
         )
         return r
 
-    def GetEntryIDs(self, get_all: bool = False) -> List[str]:
+    def GetEntryIDs(self, include_commits: bool = False) -> List[str]:
         """Get all entry ids filtered by the current workspace
 
         Returns:
             List[str]: List of entry ids
+            include_commits[bool]: Include commits for all entries. Defaults to False
         """
         # get all entries
         resp = self.MakeRequest(
             "POST",
             "/api/v1/workspace",
-            {"workspace_id": self.workspace_id},
+            {"workspace_id": self.workspace_id, "include_commits": include_commits},
         )
-        return [
-            {"entry_id": x["entry_id"], "title": x["title"]}
-            for x in resp["data"]["entries"]
-        ]
+        return resp["data"]["entries"]
 
 
 # Sublime plugin code
@@ -173,7 +171,9 @@ def commit(self, entry, selected=False):
         f"Commit {'selection' if selected else 'editor'} to '{entry['title']}' in '{mixto.workspace_id}' workspace?"
     )
     if confirm:
-        mixto.AddCommit(self.text, entry["entry_id"], f"(sublime) {self.file_name}", self.syntax)
+        mixto.AddCommit(
+            self.text, entry["entry_id"], f"(sublime) {self.file_name}", self.syntax
+        )
 
 
 class _FilenameInputHandler(sublime_plugin.TextInputHandler):
@@ -278,6 +278,7 @@ class MixtoCommitSelectionCommand(sublime_plugin.TextCommand):
 
         self.selected_entry = {}
         self.text = ""
+        self.syntax = ""
         _file = self.view.file_name()
         self.file_name = str(Path(_file).name) if _file else "Untitled"
 
@@ -293,6 +294,7 @@ class MixtoCommitSelectionCommand(sublime_plugin.TextCommand):
     def run(self, edit, fileNameFromInput):
         self.file_name = fileNameFromInput
         self.entries = mixto.GetEntryIDs()
+        self.syntax = self.view.syntax().name.lower()
 
         sel = self.view.sel()[0]
         self.text = self.view.substr(sel)
@@ -324,6 +326,7 @@ class MixtoGetCommitCommand(sublime_plugin.TextCommand):
     def __init__(self, window) -> None:
         super().__init__(window)
         self._edit = None
+        self.selected_entry = {}
 
         self._valid_commit_types = {
             "dump": None,
@@ -331,14 +334,13 @@ class MixtoGetCommitCommand(sublime_plugin.TextCommand):
             "tool": None,
             "stdout": None,
         }
-        self.selected_entry = {}
 
     def is_enabled(self):
         return True
 
     def run(self, edit):
         self._edit = edit
-        self.entries = mixto.GetEntryIDs(get_all=True)
+        self.entries = mixto.GetEntryIDs(include_commits=True)
 
         self.view.window().show_quick_panel(
             [x["title"] for x in self.entries],
@@ -350,9 +352,10 @@ class MixtoGetCommitCommand(sublime_plugin.TextCommand):
             return
 
         self.selected_entry = self.entries[index]
+
         self.selected_entry["commits"] = list(
             filter(
-                lambda x: x["type"] in self._valid_commit_types,
+                lambda x: x["commit_type"] in self._valid_commit_types,
                 self.selected_entry["commits"],
             )
         )
@@ -361,7 +364,7 @@ class MixtoGetCommitCommand(sublime_plugin.TextCommand):
             [
                 x["title"]
                 for x in self.selected_entry["commits"]
-                if x["type"] in self._valid_commit_types
+                if x["commit_type"] in self._valid_commit_types
             ],
             on_select=self._commit_selector_cb,
         )
@@ -371,14 +374,25 @@ class MixtoGetCommitCommand(sublime_plugin.TextCommand):
             return
 
         commit_id = self.selected_entry["commits"][index]["commit_id"]
-        entry_id = self.selected_entry["entry_id"]
+
+        query = """query q($commit_id: uuid = "") {
+            commit: mixto_commits_by_pk(commit_id: $commit_id) {
+                data
+            }
+        }"""
 
         commit_data = mixto.MakeRequest(
-            "GET", f"/api/entry/{mixto.workspace_id}/{entry_id}/commit/{commit_id}"
+            "POST",
+            "/api/v1/gql",
+            {"query": query, "variables": {"commit_id": commit_id}},
         )
 
         if "data" not in commit_data:
             return
+        elif "commit" not in commit_data["data"]:
+            return
+        elif "data" not in commit_data["data"]["commit"]:
+            return
 
         v = self.view.window().new_file()
-        v.run_command("append", {"characters": commit_data["data"]})
+        v.run_command("append", {"characters": commit_data["data"]["commit"]["data"]})
