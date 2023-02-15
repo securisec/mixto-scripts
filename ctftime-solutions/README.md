@@ -11,6 +11,7 @@ options:
   --event EVENT, -e EVENT
                         Event id
   --dry-run             Dry run. Dont add any commits
+  --stats               See stats for current workspace
 ```
 
 - It will look for the following environment variables:

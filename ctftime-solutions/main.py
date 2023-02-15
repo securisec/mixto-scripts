@@ -64,6 +64,16 @@ class CtftimeWriteup(MixtoLite):
             f"SELECT * from {self._table_name} where entry_id = ?", [entry_id]
         ).fetchone()
 
+    def _db_get_entries(self):
+        """Get all writeups added for a workspace
+
+        Returns:
+            List[Any]: List of writeups
+        """
+        return self.cursor.execute(
+            f"SELECT title, writeup FROM {self._table_name} where workspace_id = '{self.workspace_id}'"
+        ).fetchall()
+
     def _db_set_entries(self, entries: List[List[Any]]):
         """Insert multiple entries to the db. Order of values are
         entry_id, workspace_id, commit_id, writeup, title, int(time())
@@ -190,16 +200,26 @@ class CtftimeWriteup(MixtoLite):
 
 if __name__ == "__main__":
     parse = argparse.ArgumentParser()
-    parse.add_argument("--event", "-e", help="Event id", required=True, type=int)
+    parse.add_argument("--event", "-e", help="Event id", default=1, type=int)
     parse.add_argument(
         "--dry-run",
         help="Dry run. Dont add any commits",
         default=False,
         action="store_true",
     )
+    parse.add_argument(
+        "--stats", action="store_true", default=False, help="Show stats for workspace"
+    )
     args = parse.parse_args()
 
     c = CtftimeWriteup(str(args.event))
+
+    # only show entries that already have a ctftime commit added to it
+    if args.stats:
+        writeups = c._db_get_entries()
+        for w in writeups:
+            print("| {:1} | {:^4} |".format(*w))
+        exit()
 
     # holder to save all added entries in the end
     _added_entries = []
@@ -210,7 +230,7 @@ if __name__ == "__main__":
         if args.dry_run:
             print(entry_id, task)
 
-        elif writeup and not args.dry_run:
+        elif writeup and not args.dry_run and args.event > 1:
             res = c.AddCommit(
                 entry_id=entry_id, data=writeup, optional={"documentation": True}
             )
