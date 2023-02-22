@@ -1,6 +1,7 @@
+# type: ignore
 # Mixto lite lib for python3
 
-from typing import List
+from typing import List, Dict, Any, Union, cast
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode, urljoin
 from urllib.error import HTTPError
@@ -98,6 +99,7 @@ class MixtoLite:
             body = res.read().decode()
             self.status = res.getcode()
             if self.status > 300:
+                sublime.status_message(f"Bad response code: {self.status}")
                 raise BadResponse(self.status, res)
             if isJSON:
                 return json.loads(str(body))
@@ -155,6 +157,62 @@ class MixtoLite:
             {"workspace_id": self.workspace_id, "include_commits": include_commits},
         )
         return resp["data"]["entries"]
+
+    def GraphQL(
+        self, query: str, variables: Union[Dict[str, Any], None] = None
+    ) -> Dict[str, Any]:
+        """Make a graphql request
+
+        Args:
+            query (str): GQL query string
+            variables (Union[Dict[str, Any], None], optional): GQL variables. Defaults to None.
+
+        Raises:
+            ValueError: If the data key is not found in the response
+
+        Returns:
+            Dict[str, Any]: GQL response
+        """
+        body: Dict[str, Any] = {"query": query}
+        if variables is not None:
+            body["variables"] = variables
+        resp = self.MakeRequest("POST", "/api/v1/gql", body=body)
+
+        if "data" not in resp:
+            raise ValueError(resp)
+
+        return resp["data"]
+
+    def GetNotes(self, entry_id: str):
+        query = """
+        query q($entry_id: String!) {
+            notes: mixto_notes(where: { entry_id: { _eq: $entry_id } }, order_by: {updated_at: desc}) {
+                note_id
+                data
+            }
+        }
+        """
+        variables = {"entry_id": entry_id}
+        return self.GraphQL(query, variables)["notes"]
+
+    def UpdateNote(self, note_id: str, data: str):
+        if not note_id or not data:
+            raise ValueError("note_id or data cannot be blank")
+
+        query = """
+        mutation n($note_id: uuid = "", $data: String = "") {
+            update_mixto_notes_by_pk(
+                pk_columns: { note_id: $note_id }
+                _set: { data: $data }
+            ) {
+                note_id
+            }
+        }
+        """
+        variables = {"note_id": note_id, "data": data}
+
+        self.GraphQL(query, variables)
+        sublime.status_message("Note updated")
 
 
 # Sublime plugin code
@@ -228,6 +286,7 @@ class MixtoCommitCommand(sublime_plugin.TextCommand):
             return
 
         commit(self, self.entries[index])
+        sublime.status_message("Commit added")
 
 
 class MixtoAddNoteCommand(sublime_plugin.TextCommand):
@@ -264,8 +323,26 @@ class MixtoAddNoteCommand(sublime_plugin.TextCommand):
         )
         if confirm:
             entry_id = entry["entry_id"]
-            url = "/api/entry/{}/{}/notes".format(mixto.workspace_id, entry_id)
-            mixto.MakeRequest("POST", url, {"text": self.text})
+            query = """mutation n(
+                $entry_id: String = ""
+                $workspace_id: uuid = ""
+                $data: String = ""
+            ) {
+                insert_mixto_notes_one(
+                    object: { entry_id: $entry_id, workspace_id: $workspace_id, data: $data }
+                ) {
+                    note_id
+                }
+            }
+            """
+            variables = {
+                "entry_id": entry_id,
+                "workspace_id": mixto.workspace_id,
+                "data": self.text,
+            }
+
+            mixto.GraphQL(query, variables)
+            sublime.status_message("Note added")
 
 
 class MixtoCommitSelectionCommand(sublime_plugin.TextCommand):
@@ -396,3 +473,95 @@ class MixtoGetCommitCommand(sublime_plugin.TextCommand):
 
         v = self.view.window().new_file()
         v.run_command("append", {"characters": commit_data["data"]["commit"]["data"]})
+
+
+class MixtoUpdateNoteCommand(sublime_plugin.TextCommand):
+    """
+    Update an existing note
+    """
+
+    def __init__(self, window) -> None:
+        super().__init__(window)
+        self._edit = None
+        self.selected_entry = {}
+
+    def is_enabled(self):
+        return True
+
+    def run(self, edit):
+        self._edit = edit
+        self.entries = mixto.GetEntryIDs(include_commits=False)
+        self.notes = []
+
+        self.view.window().show_quick_panel(
+            [x["title"] for x in self.entries],
+            on_select=self._entry_selector_cb,
+        )
+
+    def _entry_selector_cb(self, index: int):
+        if index == -1 or index == None or len(self.entries) == 0:
+            return
+
+        self.selected_entry = self.entries[index]
+
+        self.notes = mixto.GetNotes((self.selected_entry["entry_id"]))
+
+        self.view.window().show_quick_panel(
+            [x["data"][:30] for x in self.notes],
+            on_select=self._note_selector_cb,
+        )
+
+    def _note_selector_cb(self, index: int):
+        if index == -1 or index == None or len(self.entries) == 0:
+            return
+
+        data = self.view.substr(sublime.Region(0, self.view.size()))
+        note_id = self.notes[index]["note_id"]
+
+        mixto.UpdateNote(note_id, data)
+
+
+class MixtoGetNoteCommand(sublime_plugin.TextCommand):
+    """
+    Get an existing note
+    """
+
+    def __init__(self, window) -> None:
+        super().__init__(window)
+        self._edit = None
+        self.selected_entry = {}
+
+    def is_enabled(self):
+        return True
+
+    def run(self, edit):
+        self._edit = edit
+        self.entries = mixto.GetEntryIDs(include_commits=False)
+        self.notes = []
+
+        self.view.window().show_quick_panel(
+            [x["title"] for x in self.entries],
+            on_select=self._entry_selector_cb,
+        )
+
+    def _entry_selector_cb(self, index: int):
+        if index == -1 or index == None or len(self.entries) == 0:
+            return
+
+        self.selected_entry = self.entries[index]
+
+        self.notes = mixto.GetNotes((self.selected_entry["entry_id"]))
+
+        self.view.window().show_quick_panel(
+            [x["data"][:30] for x in self.notes],
+            on_select=self._note_selector_cb,
+        )
+
+    def _note_selector_cb(self, index: int):
+        if index == -1 or index == None or len(self.entries) == 0:
+            return
+
+        data = self.notes[index]["data"]
+
+        v = self.view.window().new_file()
+        v.run_command("append", {"characters": data})

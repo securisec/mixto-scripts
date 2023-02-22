@@ -8,11 +8,19 @@
         "command": "mixto_commit_selection"
     },
     {
-        "caption": "Mixto add note: Add editor content as a note",
+        "caption": "Mixto show commit: open a commit",
+        "command": "mixto_get_commit"
+    },
+    {
+        "caption": "Mixto note add: Add editor content as a note",
         "command": "mixto_add_note"
     },
     {
-        "caption": "Mixto show commit: open a commit",
-        "command": "mixto_get_commit"
+        "caption": "Mixto note show",
+        "command": "mixto_get_note"
+    },
+    {
+        "caption": "Mixto note update",
+        "command": "mixto_update_note"
     }
 ]
