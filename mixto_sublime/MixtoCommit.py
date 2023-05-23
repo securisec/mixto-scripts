@@ -228,10 +228,58 @@ def commit(self, entry, selected=False):
     confirm = sublime.ok_cancel_dialog(
         f"Commit {'selection' if selected else 'editor'} to '{entry['title']}' in '{mixto.workspace_id}' workspace?"
     )
+    entryId = entry["entry_id"]
+    # set base tag from syntax
+    tags_objects = [
+        {"text": self.syntax, "entry_id": entryId, "workspace_id": mixto.workspace_id}
+    ]
+    # get all other tags
+    for t in self.tags.split(","):
+        if len(t) > 2:
+            tags_objects.append(
+                {
+                    "text": t.strip(),
+                    "entry_id": entryId,
+                    "workspace_id": mixto.workspace_id,
+                }
+            )
+
+    mutation = """mutation m(
+        $workspace_id: uuid!
+        $entry_id: String!
+        $tags: [typemixto_tags_commit_insert_input!] = {}
+        $meta: json = ""
+        $commit_type: String!
+        $data: String!
+        $title: String!
+    ) {
+        insert_mixto_commits_one(
+            object: {
+                workspace_id: $workspace_id
+                commit_type: $commit_type
+                entry_id: $entry_id
+                data: $data
+                title: $title
+                tags_commits: { data: $tags }
+                meta: $meta
+            }
+        ) {
+            commit_id
+        }
+    }"""
+
+    variables = {
+        "workspace_id": mixto.workspace_id,
+        "entry_id": entryId,
+        "tags": tags_objects,
+        "commit_type": mixto.commit_type,
+        "meta": {"syntax": self.syntax if self.syntax else "text"},
+        "data": self.text,
+        "title": f"(sublime) {self.file_name}",
+    }
+
     if confirm:
-        mixto.AddCommit(
-            self.text, entry["entry_id"], f"(sublime) {self.file_name}", self.syntax
-        )
+        mixto.GraphQL(mutation, variables)
 
 
 class _FilenameInputHandler(sublime_plugin.TextInputHandler):
@@ -243,6 +291,17 @@ class _FilenameInputHandler(sublime_plugin.TextInputHandler):
 
     def initial_text(self):
         return self.fileNameFromInput
+
+
+class _TagsInputHandler(sublime_plugin.TextInputHandler):
+    def __init__(self, tagsFromInput):
+        self.tagsFromInput = tagsFromInput
+
+    def name(self):
+        return "tagsFromInput"
+
+    def initial_text(self):
+        return self.tagsFromInput
 
 
 class MixtoCommitCommand(sublime_plugin.TextCommand):
@@ -259,18 +318,29 @@ class MixtoCommitCommand(sublime_plugin.TextCommand):
 
         file = self.view.file_name()
         self.file_name = str(Path(file).name) if file else "Untitled"
+        self.tags = ""
+        self._arg_position = 0
 
     def is_enabled(self):
         return True
 
     def input(self, args):
-        return _FilenameInputHandler(self.file_name)
+        # get multiple args from user
+        if not args.get("fileNameFromInput"):
+            return _FilenameInputHandler(self.file_name)
+        if not args.get("tagsFromInput"):
+            # used to track which arg a user is providing. this way the input description can be changed
+            self._arg_position = 1
+            return _TagsInputHandler(self.tags)
 
     def input_description(self):
+        if self._arg_position == 1:
+            return "Tags"
         return "File name"
 
-    def run(self, edit, fileNameFromInput):
+    def run(self, edit, fileNameFromInput, tagsFromInput):
         self.file_name = fileNameFromInput
+        self.tags = tagsFromInput
         self.entries = mixto.GetEntryIDs()
         self.text = self.view.substr(sublime.Region(0, self.view.size()))
         self.syntax = self.view.syntax().name.lower()
@@ -358,18 +428,27 @@ class MixtoCommitSelectionCommand(sublime_plugin.TextCommand):
         self.syntax = ""
         _file = self.view.file_name()
         self.file_name = str(Path(_file).name) if _file else "Untitled"
+        self.tags = ""
+        self._arg_position = 0
 
     def is_enabled(self):
         return True
 
     def input(self, args):
-        return _FilenameInputHandler(self.file_name)
+        if not args.get("fileNameFromInput"):
+            return _FilenameInputHandler(self.file_name)
+        if not args.get("tagsFromInput"):
+            self._arg_position = 1
+            return _TagsInputHandler(self.tags)
 
     def input_description(self):
+        if self._arg_position == 1:
+            return "Tags"
         return "File name"
 
-    def run(self, edit, fileNameFromInput):
+    def run(self, edit, fileNameFromInput, tagsFromInput):
         self.file_name = fileNameFromInput
+        self.tags = tagsFromInput
         self.entries = mixto.GetEntryIDs()
         self.syntax = self.view.syntax().name.lower()
 
