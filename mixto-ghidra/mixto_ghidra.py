@@ -165,11 +165,11 @@ try:
         from ghidra.ghidra_builtins import *
         from ghidra.app.decompiler import DecompInterface
         from ghidra.util.task import ConsoleTaskMonitor
-        from ghidra.app.util import DisplayableEol
+        # from ghidra.app.util import DisplayableEol
 except:
     from ghidra.app.decompiler import DecompInterface
     from ghidra.util.task import ConsoleTaskMonitor
-    from ghidra.app.util import DisplayableEol
+    # from ghidra.app.util import DisplayableEol
 
 
 def GetCurrentAddress():

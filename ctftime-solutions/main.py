@@ -172,10 +172,13 @@ class CtftimeWriteup(MixtoLite):
         writeup = self.parse_html(res.text, "//div[@class = 'well']/a/@href", False)
         return writeup
 
-    def match_mixto_entries(self) -> Dict[str, Dict[str, str]]:
+    def match_mixto_entries(self, force:bool = False) -> Dict[str, Dict[str, str]]:
         """Get entries from mixto and check against ctftime writeups for overlap.
         This method does rely that the ctftime task name is equal to the entry name
         in mixto
+
+        Args:
+            force (bool): Add writeup even if it exists. Useful for updating multiple instances
 
         Returns:
             Dict[str, Dict[str, str]]: Dict where key is the mixto entry id and value is a
@@ -188,7 +191,7 @@ class CtftimeWriteup(MixtoLite):
         for e in entries:
             # check if entry id exists in db. If it does, a writeup has been added for it
             # already and we can skip it. A none value means it does not exist
-            if self._db_get_entry(e["entry_id"]) is not None:
+            if self._db_get_entry(e["entry_id"]) is not None and not force:
                 print(f'Skipping {e["title"]}. Writeup already exists')
                 continue
 
@@ -210,6 +213,9 @@ if __name__ == "__main__":
     parse.add_argument(
         "--stats", action="store_true", default=False, help="Show stats for workspace"
     )
+    parse.add_argument(
+        "--force", action="store_true", default=False, help="Force add writeups"
+    )
     args = parse.parse_args()
 
     c = CtftimeWriteup(str(args.event))
@@ -223,7 +229,7 @@ if __name__ == "__main__":
 
     # holder to save all added entries in the end
     _added_entries = []
-    for entry_id, task in c.match_mixto_entries().items():
+    for entry_id, task in c.match_mixto_entries(args.force).items():
         task_id = c.ctftime_get_task(task["writeup"])
         writeup = cast(str, c.ctftime_get_writeup(cast(str, task_id)))
         # if dry run, dont add any commits
