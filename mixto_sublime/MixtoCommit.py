@@ -221,10 +221,21 @@ class MixtoLite:
 import sublime
 import sublime_plugin
 
+ENABLE_OUTPUT_CAPTURE = True
+
 mixto = MixtoLite()
 
 
 def commit(self, entry, selected=False):
+    if ENABLE_OUTPUT_CAPTURE:
+        include_output = sublime.ok_cancel_dialog(
+            f"Include output?"
+        )
+        if include_output:
+            output_window = self.view.window().find_output_panel('exec')
+            if output_window:
+                self.text += "\n\nOutput:\n" + output_window.substr(sublime.Region(0, output_window.size()))
+                
     confirm = sublime.ok_cancel_dialog(
         f"Commit {'selection' if selected else 'editor'} to '{entry['title']}' in '{mixto.workspace_id}' workspace?"
     )
