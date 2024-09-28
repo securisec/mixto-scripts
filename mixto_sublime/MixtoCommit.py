@@ -43,16 +43,18 @@ class MixtoLite:
 
         # if host or apikey is not available, read config file
         if self.host == None or self.api_key == None:
-            try:
-                conf_path = str(Path().home() / ".mixto.json")
-                with open(conf_path) as f:
-                    j = json.loads(f.read())
-                    self.host = j["host"]
-                    self.api_key = j["api_key"]
-                    self.workspace_id = j["workspace_id"]
-            except:
-                print("Cannot read mixto config file")
-                raise
+            self.read_config()
+            
+    def read_config(self):
+        try:
+            conf_path = str(Path().home() / ".mixto.json")
+            with open(conf_path) as f:
+                j = json.loads(f.read())
+                self.host = j["host"]
+                self.api_key = j["api_key"]
+                self.workspace_id = j["workspace_id"]
+        except:
+            ValueError("Cannot read mixto config file")
 
     def MakeRequest(
         self,
@@ -143,13 +145,15 @@ class MixtoLite:
         )
         return r
 
-    def GetEntryIDs(self, include_commits: bool = False) -> List[str]:
+    def GetEntryIDs(self, include_commits: bool = False, reload_config=True) -> List[str]:
         """Get all entry ids filtered by the current workspace
 
         Returns:
             List[str]: List of entry ids
             include_commits[bool]: Include commits for all entries. Defaults to False
         """
+        if reload_config:
+            self.read_config()
         # get all entries
         resp = self.MakeRequest(
             "POST",
@@ -227,12 +231,12 @@ mixto = MixtoLite()
 
 
 def commit(self, entry, selected=False):
-    if ENABLE_OUTPUT_CAPTURE:
+    output_window = self.view.window().find_output_panel('exec')
+    if ENABLE_OUTPUT_CAPTURE and output_window:
         include_output = sublime.ok_cancel_dialog(
             f"Include output?"
         )
         if include_output:
-            output_window = self.view.window().find_output_panel('exec')
             if output_window:
                 self.text += "\n\nOutput:\n" + output_window.substr(sublime.Region(0, output_window.size()))
                 
