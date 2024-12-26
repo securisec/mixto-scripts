@@ -44,7 +44,7 @@ class MixtoLite:
         # if host or apikey is not available, read config file
         if self.host == None or self.api_key == None:
             self.read_config()
-            
+
     def read_config(self):
         try:
             conf_path = str(Path().home() / ".mixto.json")
@@ -145,7 +145,9 @@ class MixtoLite:
         )
         return r
 
-    def GetEntryIDs(self, include_commits: bool = False, reload_config=True) -> List[str]:
+    def GetEntryIDs(
+        self, include_commits: bool = False, reload_config=True
+    ) -> List[str]:
         """Get all entry ids filtered by the current workspace
 
         Returns:
@@ -231,15 +233,19 @@ mixto = MixtoLite()
 
 
 def commit(self, entry, selected=False):
-    output_window = self.view.window().find_output_panel('exec')
+    output_window = self.view.window().find_output_panel("exec")
     if ENABLE_OUTPUT_CAPTURE and output_window:
-        include_output = sublime.ok_cancel_dialog(
-            f"Include output?"
-        )
+        include_output = sublime.ok_cancel_dialog("Include output?")
         if include_output:
             if output_window:
-                self.text += "\n\nOutput:\n" + output_window.substr(sublime.Region(0, output_window.size()))
-                
+                output_window_text = output_window.substr(
+                    sublime.Region(0, output_window.size())
+                )
+                if self.syntax == "python":
+                    self.text += "\n\n\"\"\"\nOutput:\n" + f'{output_window_text}\n"""'
+                else:
+                    self.text += "\n\nOutput:\n" + output_window_text
+
     confirm = sublime.ok_cancel_dialog(
         f"Commit {'selection' if selected else 'editor'} to '{entry['title']}' in '{mixto.workspace_id}' workspace?"
     )

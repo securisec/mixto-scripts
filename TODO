@@ -4,3 +4,4 @@ Todo:
   ✔ sublime
   ☐ binja
   ☐ windbg
+  ☐ gdb gef. the gef context command will print what is on screen again
