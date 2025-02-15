@@ -1,0 +1,9 @@
+{
+	"id": "mixto-obsidian",
+	"name": "Mixto Plugin",
+	"version": "1.0.0",
+	"minAppVersion": "1.8.4",
+	"description": ".",
+	"author": "securisec",
+	"isDesktopOnly": true
+}
