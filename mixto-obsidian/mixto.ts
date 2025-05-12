@@ -69,8 +69,9 @@ export class MixtoLite {
 				"content-type": "application/json",
 				"user-agent": "mixto-lite-node",
 			};
+			const bufferData = Buffer.from(data);
 			if (data) {
-				options.headers["content-length"] = data.length;
+				options.headers["content-length"] = bufferData.length;
 			}
 			const reqLib = url.protocol === "https:" ? https : http;
 			const req = reqLib.request(url.toString(), options, (res) => {
@@ -90,8 +91,8 @@ export class MixtoLite {
 					reject(`Bad response: ${res.statusCode}`)
 				);
 			});
-			if (data) {
-				req.write(data);
+			if (bufferData) {
+				req.write(bufferData);
 			}
 			req.end();
 		});

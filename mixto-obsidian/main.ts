@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFolder } from "obsidian";
+import { FrontMatterCache, Notice, Plugin, TFolder } from "obsidian";
 import { MixtoLite } from "./mixto";
 import { MixtoResponse } from "./types";
 
@@ -12,10 +12,111 @@ export default class MyPlugin extends Plugin {
 				this.showWorkspaceData();
 			},
 		});
+
+		this.addCommand({
+			id: "mixto-sync-entry-note",
+			name: "Sync current document to Mixto",
+			callback: () => {
+				this.syncDocumentAsNote();
+			},
+		});
 	}
 
 	onunload() {
 		// TODO 🔥
+	}
+
+	async syncDocumentAsNote() {
+		const mixto = new MixtoLite();
+		if (!mixto.workspace_id) {
+			new Notice(mixto.workspace_id ?? "Cannot load workspace");
+			return;
+		}
+
+		// get entry_id from front matter
+		const file = this.app.workspace.getActiveFile();
+		var frontmatter: FrontMatterCache | undefined = undefined;
+		var entryID: string;
+		var noteID: string = "";
+		if (file) {
+			const metadata = this.app.metadataCache.getFileCache(file);
+			if (metadata && metadata.frontmatter) {
+				// get the needed infromation from frontmatter
+				frontmatter = metadata.frontmatter;
+				entryID = frontmatter.mixto_entry_id;
+				noteID = frontmatter.mixto_note_id;
+				if (!entryID) {
+					this.showErrorNotice("Entry id not found");
+					return;
+				}
+			}
+		}
+		// found entry_id so we will sync the document if it has content
+		const content = await this.app.vault.read(file!);
+
+		if (!noteID) {
+			// note has never been synced so create a new note
+			// add note content
+			const mutation = `mutation m(
+		$data: String!
+		$workspace_id: uuid!
+		$entry_id: String!
+		$text: String = "obsidian"
+		$title: String!
+	) {
+		note: insert_mixto_notes_one(
+			object: {
+				data: $data
+				title: $title
+				entry_id: $entry_id
+				markdown: true
+				workspace_id: $workspace_id
+				tags_notes: {
+					data: { text: $text, workspace_id: $workspace_id, entry_id: $entry_id }
+				}
+			}
+		) {
+			note_id
+		}
+	}`;
+			const variables = {
+				entry_id: entryID!,
+				workspace_id: mixto.workspace_id,
+				data: content,
+				title: file?.name || "Untitled",
+			};
+			await mixto
+				.GraphQL(mutation, variables)
+				.catch(this.showErrorNotice)
+				.then((res) => {
+					noteID = res!.data!.note.note_id;
+					this.showErrorNotice("Note synced");
+				});
+			// update the front matter with the last synced time
+			this.app.fileManager.processFrontMatter(file!, (fm) => {
+				fm.mixto_updated_at = new Date();
+				// set note_id front matter
+				fm.mixto_note_id = noteID!;
+			});
+		} else {
+			// note already synced, so update it instead
+			const mutation = `mutation m($note_id: uuid!, $data: String!) {
+	update_mixto_notes_by_pk(pk_columns: {note_id: $note_id}, _set: {data: $data}) {
+		note_id
+	}
+}
+`;
+			const variables = { note_id: noteID, data: content };
+			await mixto
+				.GraphQL(mutation, variables)
+				.then((res) => {
+					this.app.fileManager.processFrontMatter(file!, (fm) => {
+						fm.mixto_updated_at = new Date();
+					});
+					this.showErrorNotice("Note updated");
+				})
+				.catch(this.showErrorNotice);
+		}
 	}
 
 	async showWorkspaceData() {
@@ -100,7 +201,7 @@ export default class MyPlugin extends Plugin {
     workspace_name
     entries {
       title
-      merged_data(where: {commit_type: {_nin: ["image", "asciinema"]}}, order_by: {created_at: desc}) {
+      merged_data(where: {commit_type: {_nin: ["image", "asciinema", "file"]}}, order_by: {created_at: desc}) {
         title
         data
         created_at
