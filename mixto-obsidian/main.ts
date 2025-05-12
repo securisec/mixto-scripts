@@ -52,7 +52,8 @@ export default class MyPlugin extends Plugin {
 			}
 		}
 		// found entry_id so we will sync the document if it has content
-		const content = await this.app.vault.read(file!);
+		let content = await this.app.vault.read(file!);
+		content = content.replace(/^---\n[\s\S]*?\n---\n*/, "");
 
 		if (!noteID) {
 			// note has never been synced so create a new note
